@@ -43,6 +43,46 @@ pub mod aavart {
 
         Ok(())
     }
+
+    pub fn join_pool(ctx: Context<JoinPool>) -> Result<()> {
+        let pool = &mut ctx.accounts.pool;
+        let member = ctx.accounts.member.key();
+
+        require!(
+            pool.status == PoolStatus::WaitingForMembers,
+            AavartError::PoolNotWaiting
+        );
+        require!(
+            pool.members.len() < pool.max_members as usize,
+            AavartError::PoolFull
+        );
+        require!(!pool.members.contains(&member), AavartError::AlreadyMember);
+
+        pool.members.push(member);
+
+        // transfer contribution to vault
+        let ix = anchor_lang::solana_program::system_instruction::transfer(
+            &ctx.accounts.member.key(),
+            &ctx.accounts.vault.key(),
+            pool.contribution_amount,
+        );
+        anchor_lang::solana_program::program::invoke(
+            &ix,
+            &[
+                ctx.accounts.member.to_account_info(),
+                ctx.accounts.vault.to_account_info(),
+            ],
+        )?;
+
+        // if pool is full, start it
+        if pool.members.len() == pool.max_members as usize {
+            pool.status = PoolStatus::Active;
+            pool.recipients = pool.members.clone();
+            pool.paid_this_round = vec![false; pool.max_members as usize];
+        }
+
+        Ok(())
+    }
 }
 
 // ─── Data Structures ───────────────────────────────────────────
@@ -127,6 +167,29 @@ pub struct CreatePool<'info> {
         bump
     )]
     /// CHECK: vault is a PDA that holds SOL
+    pub vault: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct JoinPool<'info> {
+    #[account(mut)]
+    pub member: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"pool", pool.creator.as_ref()],
+        bump = pool.bump
+    )]
+    pub pool: Account<'info, Pool>,
+
+    #[account(
+        mut,
+        seeds = [b"vault", pool.key().as_ref()],
+        bump = pool.vault_bump
+    )]
+    /// CHECK: vault PDA holds SOL
     pub vault: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
