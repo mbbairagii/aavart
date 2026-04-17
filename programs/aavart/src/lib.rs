@@ -1,10 +1,48 @@
 use anchor_lang::prelude::*;
 
-declare_id!("11111111111111111111111111111111");
+declare_id!("ABhVs3ycfxZvEp2xiP7JjkU4fuCXDNJ5XjUpCXmFPq9E");
 
 #[program]
 pub mod aavart {
     use super::*;
+
+    pub fn create_pool(
+        ctx: Context<CreatePool>,
+        contribution_amount: u64,
+        max_members: u8,
+        round_duration: i64,
+    ) -> Result<()> {
+        let pool = &mut ctx.accounts.pool;
+        let creator = ctx.accounts.creator.key();
+
+        pool.creator = creator;
+        pool.contribution_amount = contribution_amount;
+        pool.max_members = max_members;
+        pool.round_duration = round_duration;
+        pool.current_round = 0;
+        pool.members = vec![creator];
+        pool.recipients = vec![];
+        pool.paid_this_round = vec![];
+        pool.status = PoolStatus::WaitingForMembers;
+        pool.bump = ctx.bumps.pool;
+        pool.vault_bump = ctx.bumps.vault;
+
+        // creator pays first contribution into vault
+        let ix = anchor_lang::solana_program::system_instruction::transfer(
+            &ctx.accounts.creator.key(),
+            &ctx.accounts.vault.key(),
+            contribution_amount,
+        );
+        anchor_lang::solana_program::program::invoke(
+            &ix,
+            &[
+                ctx.accounts.creator.to_account_info(),
+                ctx.accounts.vault.to_account_info(),
+            ],
+        )?;
+
+        Ok(())
+    }
 }
 
 // ─── Data Structures ───────────────────────────────────────────
@@ -66,4 +104,30 @@ pub enum AavartError {
     NotAllPaid,
     #[msg("Already a member")]
     AlreadyMember,
+}
+
+#[derive(Accounts)]
+#[instruction(contribution_amount: u64, max_members: u8, round_duration: i64)]
+pub struct CreatePool<'info> {
+    #[account(mut)]
+    pub creator: Signer<'info>,
+
+    #[account(
+        init,
+        payer = creator,
+        space = Pool::size(max_members),
+        seeds = [b"pool", creator.key().as_ref()],
+        bump
+    )]
+    pub pool: Account<'info, Pool>,
+
+    #[account(
+        mut,
+        seeds = [b"vault", pool.key().as_ref()],
+        bump
+    )]
+    /// CHECK: vault is a PDA that holds SOL
+    pub vault: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
 }
