@@ -83,6 +83,115 @@ pub mod aavart {
 
         Ok(())
     }
+
+    pub fn contribute(ctx: Context<Contribute>) -> Result<()> {
+        let pool = &mut ctx.accounts.pool;
+        let member = ctx.accounts.member.key();
+
+        require!(
+            pool.status == PoolStatus::Active,
+            AavartError::PoolNotActive
+        );
+
+        let member_index = pool
+            .members
+            .iter()
+            .position(|m| m == &member)
+            .ok_or(AavartError::AlreadyMember)?;
+
+        require!(
+            !pool.paid_this_round[member_index],
+            AavartError::AlreadyPaid
+        );
+
+        let ix = anchor_lang::solana_program::system_instruction::transfer(
+            &ctx.accounts.member.key(),
+            &ctx.accounts.vault.key(),
+            pool.contribution_amount,
+        );
+        anchor_lang::solana_program::program::invoke(
+            &ix,
+            &[
+                ctx.accounts.member.to_account_info(),
+                ctx.accounts.vault.to_account_info(),
+            ],
+        )?;
+
+        pool.paid_this_round[member_index] = true;
+
+        Ok(())
+    }
+
+    pub fn claim(ctx: Context<Claim>) -> Result<()> {
+        let pool = &mut ctx.accounts.pool;
+
+        require!(
+            pool.status == PoolStatus::Active,
+            AavartError::PoolNotActive
+        );
+
+        let current_recipient = pool.recipients[pool.current_round as usize];
+        require!(
+            ctx.accounts.recipient.key() == current_recipient,
+            AavartError::NotYourTurn
+        );
+        require!(
+            pool.paid_this_round.iter().all(|&p| p),
+            AavartError::NotAllPaid
+        );
+
+        // 1% protocol fee to treasury
+        let pot = pool.contribution_amount * pool.max_members as u64;
+        let fee = pot / 100;
+        let payout = pot - fee;
+
+        let vault_bump = pool.vault_bump;
+        let pool_key = pool.key();
+        let seeds = &[b"vault", pool_key.as_ref(), &[vault_bump]];
+        let signer_seeds = &[&seeds[..]];
+
+        // pay treasury
+        let fee_ix = anchor_lang::solana_program::system_instruction::transfer(
+            &ctx.accounts.vault.key(),
+            &ctx.accounts.treasury.key(),
+            fee,
+        );
+        anchor_lang::solana_program::program::invoke_signed(
+            &fee_ix,
+            &[
+                ctx.accounts.vault.to_account_info(),
+                ctx.accounts.treasury.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+            signer_seeds,
+        )?;
+
+        // pay recipient
+        let pay_ix = anchor_lang::solana_program::system_instruction::transfer(
+            &ctx.accounts.vault.key(),
+            &ctx.accounts.recipient.key(),
+            payout,
+        );
+        anchor_lang::solana_program::program::invoke_signed(
+            &pay_ix,
+            &[
+                ctx.accounts.vault.to_account_info(),
+                ctx.accounts.recipient.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+            signer_seeds,
+        )?;
+
+        // advance round
+        pool.current_round += 1;
+        pool.paid_this_round = vec![false; pool.max_members as usize];
+
+        if pool.current_round as usize >= pool.max_members as usize {
+            pool.status = PoolStatus::Complete;
+        }
+
+        Ok(())
+    }
 }
 
 // ─── Data Structures ───────────────────────────────────────────
@@ -171,8 +280,6 @@ pub struct CreatePool<'info> {
 
     pub system_program: Program<'info, System>,
 }
-
-#[derive(Accounts)]
 pub struct JoinPool<'info> {
     #[account(mut)]
     pub member: Signer<'info>,
@@ -191,6 +298,55 @@ pub struct JoinPool<'info> {
     )]
     /// CHECK: vault PDA holds SOL
     pub vault: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+pub struct Contribute<'info> {
+    #[account(mut)]
+    pub member: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"pool", pool.creator.as_ref()],
+        bump = pool.bump
+    )]
+    pub pool: Account<'info, Pool>,
+
+    #[account(
+        mut,
+        seeds = [b"vault", pool.key().as_ref()],
+        bump = pool.vault_bump
+    )]
+    /// CHECK: vault PDA
+    pub vault: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct Claim<'info> {
+    #[account(mut)]
+    pub recipient: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"pool", pool.creator.as_ref()],
+        bump = pool.bump
+    )]
+    pub pool: Account<'info, Pool>,
+
+    #[account(
+        mut,
+        seeds = [b"vault", pool.key().as_ref()],
+        bump = pool.vault_bump
+    )]
+    /// CHECK: vault PDA
+    pub vault: UncheckedAccount<'info>,
+
+    /// CHECK: treasury wallet
+    #[account(mut)]
+    pub treasury: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
