@@ -280,6 +280,8 @@ pub struct CreatePool<'info> {
 
     pub system_program: Program<'info, System>,
 }
+
+#[derive(Accounts)]
 pub struct JoinPool<'info> {
     #[account(mut)]
     pub member: Signer<'info>,
@@ -302,6 +304,7 @@ pub struct JoinPool<'info> {
     pub system_program: Program<'info, System>,
 }
 
+#[derive(Accounts)]
 pub struct Contribute<'info> {
     #[account(mut)]
     pub member: Signer<'info>,
@@ -323,6 +326,7 @@ pub struct Contribute<'info> {
 
     pub system_program: Program<'info, System>,
 }
+
 
 #[derive(Accounts)]
 pub struct Claim<'info> {
