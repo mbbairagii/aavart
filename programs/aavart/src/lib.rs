@@ -27,7 +27,6 @@ pub mod aavart {
         pool.bump = ctx.bumps.pool;
         pool.vault_bump = ctx.bumps.vault;
 
-        // creator pays first contribution into vault
         let ix = anchor_lang::solana_program::system_instruction::transfer(
             &ctx.accounts.creator.key(),
             &ctx.accounts.vault.key(),
@@ -60,7 +59,6 @@ pub mod aavart {
 
         pool.members.push(member);
 
-        // transfer contribution to vault
         let ix = anchor_lang::solana_program::system_instruction::transfer(
             &ctx.accounts.member.key(),
             &ctx.accounts.vault.key(),
@@ -74,7 +72,6 @@ pub mod aavart {
             ],
         )?;
 
-        // if pool is full, start it
         if pool.members.len() == pool.max_members as usize {
             pool.status = PoolStatus::Active;
             pool.recipients = pool.members.clone();
@@ -97,7 +94,7 @@ pub mod aavart {
             .members
             .iter()
             .position(|m| m == &member)
-            .ok_or(AavartError::AlreadyMember)?;
+            .ok_or(AavartError::NotAMember)?; // ← bug fix
 
         require!(
             !pool.paid_this_round[member_index],
@@ -140,7 +137,6 @@ pub mod aavart {
             AavartError::NotAllPaid
         );
 
-        // 1% protocol fee to treasury
         let pot = pool.contribution_amount * pool.max_members as u64;
         let fee = pot / 100;
         let payout = pot - fee;
@@ -150,7 +146,6 @@ pub mod aavart {
         let seeds = &[b"vault", pool_key.as_ref(), &[vault_bump]];
         let signer_seeds = &[&seeds[..]];
 
-        // pay treasury
         let fee_ix = anchor_lang::solana_program::system_instruction::transfer(
             &ctx.accounts.vault.key(),
             &ctx.accounts.treasury.key(),
@@ -166,7 +161,6 @@ pub mod aavart {
             signer_seeds,
         )?;
 
-        // pay recipient
         let pay_ix = anchor_lang::solana_program::system_instruction::transfer(
             &ctx.accounts.vault.key(),
             &ctx.accounts.recipient.key(),
@@ -182,7 +176,6 @@ pub mod aavart {
             signer_seeds,
         )?;
 
-        // advance round
         pool.current_round += 1;
         pool.paid_this_round = vec![false; pool.max_members as usize];
 
@@ -213,17 +206,17 @@ pub struct Pool {
 
 impl Pool {
     pub fn size(max_members: u8) -> usize {
-        8                           // discriminator
-        + 32                        // creator
-        + 8                         // contribution_amount
-        + 1                         // max_members
-        + 8                         // round_duration
-        + 1                         // current_round
-        + 4 + (32 * max_members as usize)  // members vec
-        + 4 + (32 * max_members as usize)  // recipients vec
-        + 4 + (1 * max_members as usize)   // paid_this_round vec
-        + 1                         // status
-        + 1                         // vault_bump
+        8                                          // discriminator
+        + 32                                       // creator
+        + 8                                        // contribution_amount
+        + 1                                        // max_members
+        + 8                                        // round_duration
+        + 1                                        // current_round
+        + 4 + (32 * max_members as usize)          // members vec
+        + 4 + (32 * max_members as usize)          // recipients vec
+        + 4 + (1 * max_members as usize)           // paid_this_round vec
+        + 1                                        // status enum
+        + 1                                        // vault_bump
         + 1 // bump
     }
 }
@@ -253,7 +246,11 @@ pub enum AavartError {
     NotAllPaid,
     #[msg("Already a member")]
     AlreadyMember,
+    #[msg("Not a member of this pool")]
+    NotAMember,
 }
+
+// ─── Account Contexts ──────────────────────────────────────────
 
 #[derive(Accounts)]
 #[instruction(contribution_amount: u64, max_members: u8, round_duration: i64)]
@@ -326,7 +323,6 @@ pub struct Contribute<'info> {
 
     pub system_program: Program<'info, System>,
 }
-
 
 #[derive(Accounts)]
 pub struct Claim<'info> {
