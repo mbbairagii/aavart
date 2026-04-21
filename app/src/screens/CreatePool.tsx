@@ -22,7 +22,7 @@ export default function CreatePool({ onBack }: { onBack: () => void }) {
                 commitment: 'confirmed',
             })
             setProvider(provider)
-            const program = new Program(IDL as any, PROGRAM_ID, provider)
+            const program = new Program(IDL as any,provider)
             const publicKey = anchorWallet.publicKey
             const [poolPDA] = getPoolPDA(publicKey)
             const [vaultPDA] = getVaultPDA(poolPDA)

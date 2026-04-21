@@ -1,7 +1,7 @@
 import { PublicKey } from '@solana/web3.js'
 
-export const PROGRAM_ID = new PublicKey('ABhVs3ycfxZvEp2xiP7JjkU4fuCXDNJ5XjUpCXmFPq9E')
-export const TREASURY = new PublicKey('ABhVs3ycfxZvEp2xiP7JjkU4fuCXDNJ5XjUpCXmFPq9E')
+export const PROGRAM_ID = new PublicKey('J9C1N46wqffo2rtVp5YuvUSogJ6ctooQqKYtgFwYUR7t')
+export const TREASURY = new PublicKey(import.meta.env.VITE_TREASURY)
 
 const encoder = new TextEncoder()
 

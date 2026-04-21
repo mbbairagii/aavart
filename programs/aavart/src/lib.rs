@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("ABhVs3ycfxZvEp2xiP7JjkU4fuCXDNJ5XjUpCXmFPq9E");
+declare_id!("J9C1N46wqffo2rtVp5YuvUSogJ6ctooQqKYtgFwYUR7t");
 
 #[program]
 pub mod aavart {
@@ -27,6 +27,7 @@ pub mod aavart {
         pool.bump = ctx.bumps.pool;
         pool.vault_bump = ctx.bumps.vault;
 
+        // creator pays first contribution into vault
         let ix = anchor_lang::solana_program::system_instruction::transfer(
             &ctx.accounts.creator.key(),
             &ctx.accounts.vault.key(),
@@ -94,7 +95,7 @@ pub mod aavart {
             .members
             .iter()
             .position(|m| m == &member)
-            .ok_or(AavartError::NotAMember)?; // ← bug fix
+            .ok_or(AavartError::NotAMember)?;
 
         require!(
             !pool.paid_this_round[member_index],
@@ -206,17 +207,17 @@ pub struct Pool {
 
 impl Pool {
     pub fn size(max_members: u8) -> usize {
-        8                                          // discriminator
-        + 32                                       // creator
-        + 8                                        // contribution_amount
-        + 1                                        // max_members
-        + 8                                        // round_duration
-        + 1                                        // current_round
-        + 4 + (32 * max_members as usize)          // members vec
-        + 4 + (32 * max_members as usize)          // recipients vec
-        + 4 + (1 * max_members as usize)           // paid_this_round vec
-        + 1                                        // status enum
-        + 1                                        // vault_bump
+        8                                        // discriminator
+        + 32                                     // creator
+        + 8                                      // contribution_amount
+        + 1                                      // max_members
+        + 8                                      // round_duration
+        + 1                                      // current_round
+        + 4 + (32 * max_members as usize)        // members vec
+        + 4 + (32 * max_members as usize)        // recipients vec
+        + 4 + (1 * max_members as usize)         // paid_this_round vec
+        + 1                                      // status enum
+        + 1                                      // vault_bump
         + 1 // bump
     }
 }
@@ -268,7 +269,9 @@ pub struct CreatePool<'info> {
     pub pool: Account<'info, Pool>,
 
     #[account(
-        mut,
+        init,
+        payer = creator,
+        space = 0,
         seeds = [b"vault", pool.key().as_ref()],
         bump
     )]

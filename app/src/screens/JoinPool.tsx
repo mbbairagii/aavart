@@ -45,7 +45,7 @@ export default function JoinPool({ poolAddress, onBack }: Props) {
             commitment: 'confirmed',
         })
         setProvider(provider)
-        return new Program(IDL as any, PROGRAM_ID, provider)
+        return new Program(IDL as any, provider)
     }
 
     async function fetchPool() {
@@ -53,7 +53,8 @@ export default function JoinPool({ poolAddress, onBack }: Props) {
         setFetching(true)
         try {
             const program = await getProgram()
-            const data = await program.account.pool.fetch(poolPubkey)
+            // cast via unknown to bypass the AccountNamespace type error
+            const data = await (program.account as any).pool.fetch(poolPubkey)
             setPoolData(data as PoolData)
         } catch (e: any) {
             setError('pool not found or invalid address')
@@ -175,7 +176,7 @@ export default function JoinPool({ poolAddress, onBack }: Props) {
                         {/* status badge */}
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${statusLabel === 'waiting for members' ? 'bg-yellow-400' :
-                                    statusLabel === 'active' ? 'bg-green-400' : 'bg-zinc-500'
+                                statusLabel === 'active' ? 'bg-green-400' : 'bg-zinc-500'
                                 }`} />
                             <span className="text-sm text-zinc-400">{statusLabel}</span>
                         </div>

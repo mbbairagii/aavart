@@ -1,0 +1,294 @@
+{
+  "address": "J9C1N46wqffo2rtVp5YuvUSogJ6ctooQqKYtgFwYUR7t",
+  "metadata": {
+    "name": "aavart",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "claim",
+      "discriminator": [
+        62,
+        198,
+        214,
+        193,
+        213,
+        159,
+        108,
+        210
+      ],
+      "accounts": [
+        {
+          "name": "recipient",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "contribute",
+      "discriminator": [
+        82,
+        33,
+        68,
+        131,
+        32,
+        0,
+        205,
+        95
+      ],
+      "accounts": [
+        {
+          "name": "member",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_pool",
+      "discriminator": [
+        233,
+        146,
+        209,
+        142,
+        207,
+        104,
+        64,
+        188
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "contribution_amount",
+          "type": "u64"
+        },
+        {
+          "name": "max_members",
+          "type": "u8"
+        },
+        {
+          "name": "round_duration",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "join_pool",
+      "discriminator": [
+        14,
+        65,
+        62,
+        16,
+        116,
+        17,
+        195,
+        107
+      ],
+      "accounts": [
+        {
+          "name": "member",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Pool",
+      "discriminator": [
+        241,
+        154,
+        109,
+        4,
+        17,
+        177,
+        109,
+        188
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "PoolFull",
+      "msg": "Pool is full"
+    },
+    {
+      "code": 6001,
+      "name": "PoolNotWaiting",
+      "msg": "Pool is not in waiting state"
+    },
+    {
+      "code": 6002,
+      "name": "PoolNotActive",
+      "msg": "Pool is not active"
+    },
+    {
+      "code": 6003,
+      "name": "AlreadyPaid",
+      "msg": "Already paid this round"
+    },
+    {
+      "code": 6004,
+      "name": "NotYourTurn",
+      "msg": "Not your turn to claim"
+    },
+    {
+      "code": 6005,
+      "name": "NotAllPaid",
+      "msg": "Not all members have paid"
+    },
+    {
+      "code": 6006,
+      "name": "AlreadyMember",
+      "msg": "Already a member"
+    },
+    {
+      "code": 6007,
+      "name": "NotAMember",
+      "msg": "Not a member of this pool"
+    }
+  ],
+  "types": [
+    {
+      "name": "Pool",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "contribution_amount",
+            "type": "u64"
+          },
+          {
+            "name": "max_members",
+            "type": "u8"
+          },
+          {
+            "name": "round_duration",
+            "type": "i64"
+          },
+          {
+            "name": "current_round",
+            "type": "u8"
+          },
+          {
+            "name": "members",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "recipients",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "paid_this_round",
+            "type": {
+              "vec": "bool"
+            }
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "PoolStatus"
+              }
+            }
+          },
+          {
+            "name": "vault_bump",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "WaitingForMembers"
+          },
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Complete"
+          }
+        ]
+      }
+    }
+  ]
+}
