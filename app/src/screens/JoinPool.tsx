@@ -17,9 +17,10 @@ interface PoolData {
 interface Props {
     poolAddress: string
     onBack: () => void
+    onSuccess: (poolAddress: string) => void
 }
 
-export default function JoinPool({ poolAddress, onBack }: Props) {
+export default function JoinPool({ poolAddress, onBack, onSuccess }: Props) {
     const anchorWallet = useAnchorWallet()
     const { connection } = useConnection()
     const [poolData, setPoolData] = useState<PoolData | null>(null)
@@ -91,7 +92,8 @@ export default function JoinPool({ poolAddress, onBack }: Props) {
             await provider.sendAndConfirm(tx, [], { skipPreflight: true })
 
             setJoined(true)
-            await fetchPool() // refresh pool state
+            await fetchPool()
+            setTimeout(() => onSuccess(poolAddress), 1500)
         } catch (e: any) {
             setError(e.message)
         }

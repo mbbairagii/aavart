@@ -1,11 +1,16 @@
 import { useState } from 'react'
 import { useConnection, useAnchorWallet } from '@solana/wallet-adapter-react'
 import { Program, AnchorProvider, BN, setProvider } from '@coral-xyz/anchor'
-import { SystemProgram, PublicKey } from '@solana/web3.js'
+import { SystemProgram } from '@solana/web3.js'
 import { IDL } from '../lib/idl'
-import { getPoolPDA, getVaultPDA, PROGRAM_ID } from '../lib/program'
+import { getPoolPDA, getVaultPDA } from '../lib/program'
 
-export default function CreatePool({ onBack }: { onBack: () => void }) {
+interface Props {
+    onBack: () => void
+    onSuccess: (poolAddress: string) => void
+}
+
+export default function CreatePool({ onBack, onSuccess }: Props) {
     const anchorWallet = useAnchorWallet()
     const { connection } = useConnection()
     const [amount, setAmount] = useState('')
@@ -22,7 +27,7 @@ export default function CreatePool({ onBack }: { onBack: () => void }) {
                 commitment: 'confirmed',
             })
             setProvider(provider)
-            const program = new Program(IDL as any,provider)
+            const program = new Program(IDL as any, provider)
             const publicKey = anchorWallet.publicKey
             const [poolPDA] = getPoolPDA(publicKey)
             const [vaultPDA] = getVaultPDA(poolPDA)
@@ -45,13 +50,20 @@ export default function CreatePool({ onBack }: { onBack: () => void }) {
             tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
             await provider.sendAndConfirm(tx, [], { skipPreflight: true })
 
-            // ✅ invite link — inside try, poolPDA is in scope
-            const inviteUrl = `${window.location.origin}/?pool=${poolPDA.toString()}`
-            await navigator.clipboard.writeText(inviteUrl)
-            alert(`pool created!\n\naddress: ${poolPDA.toString()}\n\ninvite link copied to clipboard ✓`)
+            // Clipboard write isolated — must not block onSuccess
+            try {
+                const inviteUrl = `${window.location.origin}/?pool=${poolPDA.toString()}`
+                await navigator.clipboard.writeText(inviteUrl)
+            } catch {
+                // clipboard permission denied — non-critical, ignore
+            }
+
+            // Always runs regardless of clipboard outcome
+            onSuccess(poolPDA.toString())
 
         } catch (e: any) {
-            console.error(e)
+            console.error('FULL ERROR:', e)
+            console.error('Error logs:', e.logs)
             alert('error: ' + e.message)
         }
         setLoading(false)
@@ -70,30 +82,21 @@ export default function CreatePool({ onBack }: { onBack: () => void }) {
             <div className="flex flex-col gap-5">
                 <div className="flex flex-col gap-2">
                     <label className="text-sm text-zinc-400">contribution per round (SOL)</label>
-                    <input
-                        type="number" value={amount}
-                        onChange={e => setAmount(e.target.value)}
+                    <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
                         placeholder="0.5"
-                        className="py-4 px-4 bg-zinc-900 rounded-xl border border-zinc-800 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-600"
-                    />
+                        className="py-4 px-4 bg-zinc-900 rounded-xl border border-zinc-800 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-600" />
                 </div>
                 <div className="flex flex-col gap-2">
                     <label className="text-sm text-zinc-400">number of members</label>
-                    <input
-                        type="number" value={members}
-                        onChange={e => setMembers(e.target.value)}
+                    <input type="number" value={members} onChange={e => setMembers(e.target.value)}
                         placeholder="5"
-                        className="py-4 px-4 bg-zinc-900 rounded-xl border border-zinc-800 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-600"
-                    />
+                        className="py-4 px-4 bg-zinc-900 rounded-xl border border-zinc-800 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-600" />
                 </div>
                 <div className="flex flex-col gap-2">
                     <label className="text-sm text-zinc-400">round duration (days)</label>
-                    <input
-                        type="number" value={duration}
-                        onChange={e => setDuration(e.target.value)}
+                    <input type="number" value={duration} onChange={e => setDuration(e.target.value)}
                         placeholder="7"
-                        className="py-4 px-4 bg-zinc-900 rounded-xl border border-zinc-800 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-600"
-                    />
+                        className="py-4 px-4 bg-zinc-900 rounded-xl border border-zinc-800 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-600" />
                 </div>
                 {pot && (
                     <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
@@ -101,11 +104,9 @@ export default function CreatePool({ onBack }: { onBack: () => void }) {
                         <p className="text-2xl font-bold mt-1">{pot} SOL</p>
                     </div>
                 )}
-                <button
-                    onClick={handleCreate}
+                <button onClick={handleCreate}
                     disabled={!amount || !members || !duration || loading}
-                    className="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                >
+                    className="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                     {loading ? 'creating...' : 'create pool'}
                 </button>
             </div>

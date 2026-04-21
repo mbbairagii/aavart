@@ -3,25 +3,31 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import Home from './screens/Home'
 import CreatePool from './screens/CreatePool'
 import JoinPool from './screens/JoinPool'
+import Dashboard from './screens/Dashboard'
 
-export type Screen = 'home' | 'create' | 'join'
+export type Screen = 'home' | 'create' | 'join' | 'dashboard'
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
-  const [joinPoolAddress, setJoinPoolAddress] = useState<string | null>(null)
+  const [activePoolAddress, setActivePoolAddress] = useState<string | null>(null)
 
-  // handle invite links: /?pool=<address>
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const poolAddress = params.get('pool')
     if (poolAddress) {
-      setJoinPoolAddress(poolAddress)
+      setActivePoolAddress(poolAddress)
       setScreen('join')
     }
   }, [])
 
+  function goToDashboard(address: string) {
+    console.log('goToDashboard called with:', address)
+    setActivePoolAddress(address)
+    setScreen('dashboard')
+  }
+
   function handleJoinFromInvite(address: string) {
-    setJoinPoolAddress(address)
+    setActivePoolAddress(address)
     setScreen('join')
   }
 
@@ -44,11 +50,21 @@ export default function App() {
         />
       )}
       {screen === 'create' && (
-        <CreatePool onBack={() => setScreen('home')} />
+        <CreatePool
+          onBack={() => setScreen('home')}
+          onSuccess={goToDashboard}
+        />
       )}
-      {screen === 'join' && joinPoolAddress && (
+      {screen === 'join' && activePoolAddress && (
         <JoinPool
-          poolAddress={joinPoolAddress}
+          poolAddress={activePoolAddress}
+          onBack={() => setScreen('home')}
+          onSuccess={goToDashboard}
+        />
+      )}
+      {screen === 'dashboard' && activePoolAddress && (
+        <Dashboard
+          poolAddress={activePoolAddress}
           onBack={() => setScreen('home')}
         />
       )}
