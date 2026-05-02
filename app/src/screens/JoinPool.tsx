@@ -3,7 +3,7 @@ import { useConnection, useAnchorWallet } from '@solana/wallet-adapter-react'
 import { Program, AnchorProvider, setProvider } from '@coral-xyz/anchor'
 import { SystemProgram, PublicKey } from '@solana/web3.js'
 import { IDL } from '../lib/idl'
-import { getPoolPDA, getVaultPDA, PROGRAM_ID } from '../lib/program'
+import {getVaultPDA} from '../lib/program'
 
 interface PoolData {
     creator: PublicKey
@@ -69,15 +69,9 @@ export default function JoinPool({ poolAddress, onBack, onSuccess }: Props) {
         setError(null)
         try {
             const program = await getProgram()
-            const provider = new AnchorProvider(connection, anchorWallet, {
-                preflightCommitment: 'confirmed',
-                commitment: 'confirmed',
-            })
-
-            // derive vault from pool address
             const [vaultPDA] = getVaultPDA(poolPubkey)
 
-            const tx = await program.methods
+            await program.methods
                 .joinPool()
                 .accounts({
                     member: anchorWallet.publicKey,
@@ -85,11 +79,7 @@ export default function JoinPool({ poolAddress, onBack, onSuccess }: Props) {
                     vault: vaultPDA,
                     systemProgram: SystemProgram.programId,
                 })
-                .transaction()
-
-            tx.feePayer = anchorWallet.publicKey
-            tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-            await provider.sendAndConfirm(tx, [], { skipPreflight: true })
+                .rpc({ skipPreflight: true, commitment: 'confirmed' })
 
             setJoined(true)
             await fetchPool()
