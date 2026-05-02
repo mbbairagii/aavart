@@ -25,14 +25,21 @@ export default function CreatePool({ onBack, onSuccess }: Props) {
             const provider = new AnchorProvider(connection, anchorWallet, {
                 preflightCommitment: 'confirmed',
                 commitment: 'confirmed',
+                skipPreflight: true,
             })
             setProvider(provider)
             const program = new Program(IDL as any, provider)
+            console.log('available methods:', Object.keys((program.methods as any)))
             const publicKey = anchorWallet.publicKey
             const [poolPDA] = getPoolPDA(publicKey)
             const [vaultPDA] = getVaultPDA(poolPDA)
+            console.log('program id:', program.programId.toString())
+            console.log('wallet:', publicKey.toString())
+            console.log('poolPDA:', poolPDA.toString())
+            console.log('vaultPDA:', vaultPDA.toString())
 
-            const tx = await program.methods
+
+            await program.methods
                 .createPool(
                     new BN(parseFloat(amount) * 1e9),
                     parseInt(members),
@@ -44,12 +51,7 @@ export default function CreatePool({ onBack, onSuccess }: Props) {
                     vault: vaultPDA,
                     systemProgram: SystemProgram.programId,
                 })
-                .transaction()
-
-            tx.feePayer = publicKey
-            tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-            await provider.sendAndConfirm(tx, [], { skipPreflight: true })
-
+                .rpc({ skipPreflight: true, commitment: 'confirmed' })
             // Clipboard write isolated — must not block onSuccess
             try {
                 const inviteUrl = `${window.location.origin}/?pool=${poolPDA.toString()}`

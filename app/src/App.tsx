@@ -23,7 +23,7 @@ export default function App() {
   function goToDashboard(address: string) {
     console.log('goToDashboard called with:', address)
     setActivePoolAddress(address)
-    setScreen('dashboard')
+    setTimeout(() => setScreen('dashboard'), 0)
   }
 
   function handleJoinFromInvite(address: string) {
