@@ -25,21 +25,20 @@ export default function CreatePool({ onBack, onSuccess }: Props) {
             const provider = new AnchorProvider(connection, anchorWallet, {
                 preflightCommitment: 'confirmed',
                 commitment: 'confirmed',
-                skipPreflight: true,
             })
             setProvider(provider)
             const program = new Program(IDL as any, provider)
-            console.log('available methods:', Object.keys((program.methods as any)))
+
             const publicKey = anchorWallet.publicKey
             const [poolPDA] = getPoolPDA(publicKey)
             const [vaultPDA] = getVaultPDA(poolPDA)
+
             console.log('program id:', program.programId.toString())
             console.log('wallet:', publicKey.toString())
             console.log('poolPDA:', poolPDA.toString())
             console.log('vaultPDA:', vaultPDA.toString())
 
-
-            await program.methods
+            const tx = await program.methods
                 .createPool(
                     new BN(parseFloat(amount) * 1e9),
                     parseInt(members),
@@ -51,16 +50,24 @@ export default function CreatePool({ onBack, onSuccess }: Props) {
                     vault: vaultPDA,
                     systemProgram: SystemProgram.programId,
                 })
-                .rpc({ skipPreflight: true, commitment: 'confirmed' })
-            // Clipboard write isolated — must not block onSuccess
+                .transaction()
+
+            tx.feePayer = publicKey
+            tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+            const signed = await anchorWallet.signTransaction(tx)
+            const sig = await connection.sendRawTransaction(signed.serialize(), {
+                skipPreflight: true,
+            })
+            console.log('tx sig:', sig)
+            await connection.confirmTransaction(sig, 'confirmed')
+
             try {
                 const inviteUrl = `${window.location.origin}/?pool=${poolPDA.toString()}`
                 await navigator.clipboard.writeText(inviteUrl)
             } catch {
-                // clipboard permission denied — non-critical, ignore
+                // clipboard permission denied — non-critical
             }
 
-            // Always runs regardless of clipboard outcome
             onSuccess(poolPDA.toString())
 
         } catch (e: any) {

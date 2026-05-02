@@ -142,40 +142,12 @@ pub mod aavart {
         let fee = pot / 100;
         let payout = pot - fee;
 
-        let vault_bump = pool.vault_bump;
-        let pool_key = pool.key();
-        let seeds = &[b"vault", pool_key.as_ref(), &[vault_bump]];
-        let signer_seeds = &[&seeds[..]];
+        // Direct lamport transfer — works for system-owned PDAs
+        **ctx.accounts.vault.try_borrow_mut_lamports()? -= fee;
+        **ctx.accounts.treasury.try_borrow_mut_lamports()? += fee;
 
-        let fee_ix = anchor_lang::solana_program::system_instruction::transfer(
-            &ctx.accounts.vault.key(),
-            &ctx.accounts.treasury.key(),
-            fee,
-        );
-        anchor_lang::solana_program::program::invoke_signed(
-            &fee_ix,
-            &[
-                ctx.accounts.vault.to_account_info(),
-                ctx.accounts.treasury.to_account_info(),
-                ctx.accounts.system_program.to_account_info(),
-            ],
-            signer_seeds,
-        )?;
-
-        let pay_ix = anchor_lang::solana_program::system_instruction::transfer(
-            &ctx.accounts.vault.key(),
-            &ctx.accounts.recipient.key(),
-            payout,
-        );
-        anchor_lang::solana_program::program::invoke_signed(
-            &pay_ix,
-            &[
-                ctx.accounts.vault.to_account_info(),
-                ctx.accounts.recipient.to_account_info(),
-                ctx.accounts.system_program.to_account_info(),
-            ],
-            signer_seeds,
-        )?;
+        **ctx.accounts.vault.try_borrow_mut_lamports()? -= payout;
+        **ctx.accounts.recipient.try_borrow_mut_lamports()? += payout;
 
         pool.current_round += 1;
         pool.paid_this_round = vec![false; pool.max_members as usize];

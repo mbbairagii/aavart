@@ -3,7 +3,7 @@ import { useConnection, useAnchorWallet } from '@solana/wallet-adapter-react'
 import { Program, AnchorProvider, setProvider } from '@coral-xyz/anchor'
 import { SystemProgram, PublicKey } from '@solana/web3.js'
 import { IDL } from '../lib/idl'
-import {getVaultPDA} from '../lib/program'
+import { getVaultPDA } from '../lib/program'
 
 interface PoolData {
     creator: PublicKey
@@ -54,10 +54,9 @@ export default function JoinPool({ poolAddress, onBack, onSuccess }: Props) {
         setFetching(true)
         try {
             const program = await getProgram()
-            // cast via unknown to bypass the AccountNamespace type error
             const data = await (program.account as any).pool.fetch(poolPubkey)
             setPoolData(data as PoolData)
-        } catch (e: any) {
+        } catch {
             setError('pool not found or invalid address')
         }
         setFetching(false)
@@ -71,7 +70,7 @@ export default function JoinPool({ poolAddress, onBack, onSuccess }: Props) {
             const program = await getProgram()
             const [vaultPDA] = getVaultPDA(poolPubkey)
 
-            await program.methods
+            const tx = await program.methods
                 .joinPool()
                 .accounts({
                     member: anchorWallet.publicKey,
@@ -79,12 +78,23 @@ export default function JoinPool({ poolAddress, onBack, onSuccess }: Props) {
                     vault: vaultPDA,
                     systemProgram: SystemProgram.programId,
                 })
-                .rpc({ skipPreflight: true, commitment: 'confirmed' })
+                .transaction()
+
+            tx.feePayer = anchorWallet.publicKey
+            tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+            const signed = await anchorWallet.signTransaction(tx)
+            const sig = await connection.sendRawTransaction(signed.serialize(), {
+                skipPreflight: true,
+            })
+            console.log('join tx sig:', sig)
+            await connection.confirmTransaction(sig, 'confirmed')
 
             setJoined(true)
             await fetchPool()
             setTimeout(() => onSuccess(poolAddress), 1500)
         } catch (e: any) {
+            console.error('logs:', e.logs)
+            console.error('full:', e)
             setError(e.message)
         }
         setLoading(false)
@@ -142,7 +152,6 @@ export default function JoinPool({ poolAddress, onBack, onSuccess }: Props) {
 
             {!fetching && poolData && (
                 <>
-                    {/* pool info */}
                     <div className="flex flex-col gap-3">
                         <div className="grid grid-cols-2 gap-3">
                             <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
@@ -165,7 +174,6 @@ export default function JoinPool({ poolAddress, onBack, onSuccess }: Props) {
                             </div>
                         </div>
 
-                        {/* status badge */}
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${statusLabel === 'waiting for members' ? 'bg-yellow-400' :
                                 statusLabel === 'active' ? 'bg-green-400' : 'bg-zinc-500'
@@ -174,7 +182,6 @@ export default function JoinPool({ poolAddress, onBack, onSuccess }: Props) {
                         </div>
                     </div>
 
-                    {/* member list */}
                     <div className="flex flex-col gap-2">
                         <p className="text-sm text-zinc-400">members</p>
                         {poolData.members.map((m, i) => (
@@ -190,7 +197,6 @@ export default function JoinPool({ poolAddress, onBack, onSuccess }: Props) {
                         ))}
                     </div>
 
-                    {/* action */}
                     {joined ? (
                         <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 text-center">
                             <p className="text-green-400 font-semibold">joined!</p>
@@ -201,8 +207,14 @@ export default function JoinPool({ poolAddress, onBack, onSuccess }: Props) {
                             </p>
                         </div>
                     ) : isAlreadyMember ? (
-                        <div className="text-zinc-500 text-sm text-center py-4">
-                            you're already in this pool
+                        <div className="flex flex-col items-center gap-3 py-4">
+                            <p className="text-zinc-500 text-sm">you're already in this pool</p>
+                            <button
+                                onClick={() => onSuccess(poolAddress)}
+                                className="px-6 py-3 bg-white text-black font-semibold rounded-xl hover:bg-zinc-100 transition text-sm"
+                            >
+                                go to dashboard →
+                            </button>
                         </div>
                     ) : isFull ? (
                         <div className="text-zinc-500 text-sm text-center py-4">
@@ -218,9 +230,7 @@ export default function JoinPool({ poolAddress, onBack, onSuccess }: Props) {
                             disabled={!anchorWallet || loading}
                             className="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
                         >
-                            {loading
-                                ? 'joining...'
-                                : `join for ${contributionSOL} SOL`}
+                            {loading ? 'joining...' : `join for ${contributionSOL} SOL`}
                         </button>
                     )}
                 </>

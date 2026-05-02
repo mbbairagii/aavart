@@ -3,7 +3,7 @@ import { useConnection, useAnchorWallet } from '@solana/wallet-adapter-react'
 import { Program, AnchorProvider, setProvider } from '@coral-xyz/anchor'
 import { SystemProgram, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js'
 import { IDL } from '../lib/idl'
-import { getVaultPDA, PROGRAM_ID, TREASURY } from '../lib/program'
+import { getVaultPDA, TREASURY } from '../lib/program'
 
 interface PoolData {
     creator: PublicKey
@@ -72,8 +72,9 @@ export default function Dashboard({ poolAddress, onBack }: Props) {
         if (!anchorWallet || !poolPubkey || !pool) return
         setActionLoading(true)
         try {
-            const { program, provider } = await getProgram()
+            const { program } = await getProgram()
             const [vaultPDA] = getVaultPDA(poolPubkey)
+
             const tx = await (program.methods as any)
                 .contribute()
                 .accounts({
@@ -83,12 +84,19 @@ export default function Dashboard({ poolAddress, onBack }: Props) {
                     systemProgram: SystemProgram.programId,
                 })
                 .transaction()
+
             tx.feePayer = anchorWallet.publicKey
             tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-            await provider.sendAndConfirm(tx, [], { skipPreflight: true })
+            const signed = await anchorWallet.signTransaction(tx)
+            const sig = await connection.sendRawTransaction(signed.serialize(), {
+                skipPreflight: true,
+            })
+            await connection.confirmTransaction(sig, 'confirmed')
             await fetchPool()
         } catch (e: any) {
-            alert('error: ' + e.message)
+            console.error('logs:', e.logs)
+            console.error('full:', e)
+            alert('error: ' + (e.message ?? e.toString() ?? 'unknown error'))
         }
         setActionLoading(false)
     }
@@ -97,8 +105,15 @@ export default function Dashboard({ poolAddress, onBack }: Props) {
         if (!anchorWallet || !poolPubkey || !pool) return
         setActionLoading(true)
         try {
-            const { program, provider } = await getProgram()
+            const { program } = await getProgram()
             const [vaultPDA] = getVaultPDA(poolPubkey)
+
+            const preBal = await connection.getBalance(vaultPDA)
+            console.log('pre-claim vault balance (lamports):', preBal)
+            console.log('recipient being passed:', anchorWallet.publicKey.toString())
+            console.log('pool.recipients[currentRound]:', pool.recipients[pool.currentRound]?.toString())
+            console.log('match?', anchorWallet.publicKey.toString() === pool.recipients[pool.currentRound]?.toString())
+
             const tx = await (program.methods as any)
                 .claim()
                 .accounts({
@@ -109,24 +124,44 @@ export default function Dashboard({ poolAddress, onBack }: Props) {
                     systemProgram: SystemProgram.programId,
                 })
                 .transaction()
+
             tx.feePayer = anchorWallet.publicKey
             tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-            await provider.sendAndConfirm(tx, [], { skipPreflight: true })
+            const signed = await anchorWallet.signTransaction(tx)
+            const sig = await connection.sendRawTransaction(signed.serialize(), {
+                skipPreflight: true,
+            })
+
+            console.log('tx sig:', sig)
+            console.log('explorer:', `https://explorer.solana.com/tx/${sig}?cluster=devnet`)
+
+            const result = await connection.confirmTransaction(sig, 'confirmed')
+            console.log('confirm result:', result)
+
+            await new Promise(r => setTimeout(r, 1500))
+            const postBal = await connection.getBalance(vaultPDA)
+            console.log('post-claim vault balance (lamports):', postBal)
+
             await fetchPool()
         } catch (e: any) {
-            alert('error: ' + e.message)
+            console.error('logs:', e.logs)
+            console.error('full:', e)
+            alert('error: ' + (e.message ?? e.toString() ?? 'unknown error'))
         }
         setActionLoading(false)
     }
 
     async function copyInvite() {
-        const url = `${window.location.origin}/?pool=${poolAddress}`
-        await navigator.clipboard.writeText(url)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
+        try {
+            const url = `${window.location.origin}/?pool=${poolAddress}`
+            await navigator.clipboard.writeText(url)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 2000)
+        } catch {
+            // clipboard denied
+        }
     }
 
-    // derived state
     const myKey = anchorWallet?.publicKey.toString()
     const myIndex = pool ? pool.members.findIndex(m => m.toString() === myKey) : -1
     const isMember = myIndex !== -1
@@ -178,7 +213,7 @@ export default function Dashboard({ poolAddress, onBack }: Props) {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${isWaiting ? 'bg-yellow-400' :
-                                    isActive ? 'bg-green-400' : 'bg-zinc-500'
+                                isActive ? 'bg-green-400' : 'bg-zinc-500'
                                 }`} />
                             <span className="text-sm text-zinc-400">
                                 {isWaiting ? 'waiting for members' :
@@ -219,9 +254,8 @@ export default function Dashboard({ poolAddress, onBack }: Props) {
                             const paid = pool.paidThisRound[i]
                             return (
                                 <div key={i} className="flex items-center gap-3 py-3 px-4 bg-zinc-900 rounded-xl border border-zinc-800">
-                                    {/* paid indicator */}
                                     <div className={`w-2 h-2 rounded-full flex-shrink-0 ${!isActive ? 'bg-zinc-600' :
-                                            paid ? 'bg-green-400' : 'bg-zinc-600'
+                                        paid ? 'bg-green-400' : 'bg-zinc-600'
                                         }`} />
                                     <span className="text-xs font-mono text-zinc-300 truncate flex-1">
                                         {m.toString().slice(0, 20)}...{m.toString().slice(-6)}
@@ -247,10 +281,9 @@ export default function Dashboard({ poolAddress, onBack }: Props) {
                     {/* actions */}
                     {isActive && isMember && (
                         <div className="flex flex-col gap-3">
-                            {/* contribute */}
                             {!alreadyPaid && (
                                 <button onClick={handleContribute}
-                                    disabled={actionLoading || alreadyPaid}
+                                    disabled={actionLoading}
                                     className="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                                     {actionLoading ? 'confirming...' : `contribute ${contributionSOL} SOL`}
                                 </button>
@@ -260,8 +293,6 @@ export default function Dashboard({ poolAddress, onBack }: Props) {
                                     ✓ you've paid this round
                                 </div>
                             )}
-
-                            {/* claim */}
                             {isMyTurnToClaim && (
                                 <button onClick={handleClaim}
                                     disabled={actionLoading || !allPaid}
