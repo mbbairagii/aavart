@@ -1,1 +1,213 @@
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=DM+Mono:wght@400;500&family=Bebas+Neue&display=swap');
+
 @import "tailwindcss";
+
+:root,
+[data-theme="light"] {
+    --font-display: 'Bangers', 'Impact', cursive;
+    --font-ui: 'DM Mono', monospace;
+    --color-bg: #f5f2eb;
+    --color-surface: #ffffff;
+    --color-surface-2: #f0ede5;
+    --color-border: #111111;
+    --color-text: #111111;
+    --color-text-muted: #555555;
+    --color-text-inv: #f5f2eb;
+    --color-ink: #111111;
+    --color-paper: #f5f2eb;
+    --color-panel-bg: #ffffff;
+    --color-panel-inv: #111111;
+    --color-panel-inv-text: #f5f2eb;
+    --color-dot: #c8c4bb;
+    --color-accent-glow: #aef359;
+    --shadow: 4px 4px 0px #111111;
+    --shadow-lg: 6px 6px 0px #111111;
+}
+
+[data-theme="dark"] {
+    --color-bg: #0f0f0f;
+    --color-surface: #1a1a1a;
+    --color-surface-2: #222222;
+    --color-border: #f0ede5;
+    --color-text: #f0ede5;
+    --color-text-muted: #aaaaaa;
+    --color-text-inv: #111111;
+    --color-ink: #f0ede5;
+    --color-paper: #0f0f0f;
+    --color-panel-bg: #1a1a1a;
+    --color-panel-inv: #f0ede5;
+    --color-panel-inv-text: #111111;
+    --color-dot: #2a2a2a;
+    --color-accent-glow: #aef359;
+    --shadow: 4px 4px 0px #f0ede5;
+    --shadow-lg: 6px 6px 0px #f0ede5;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+}
+
+body {
+    min-height: 100dvh;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.6;
+    transition: background 0.2s ease, color 0.2s ease;
+    background-image: radial-gradient(circle, var(--color-dot) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+h1,
+h2,
+h3 {
+    font-family: var(--font-display);
+    letter-spacing: 0.04em;
+    line-height: 0.95;
+}
+
+input,
+button,
+textarea,
+select {
+    font: inherit;
+    color: inherit;
+}
+
+img,
+svg {
+    display: block;
+}
+
+button {
+    cursor: pointer;
+    background: none;
+    border: none;
+}
+
+::selection {
+    background: var(--color-ink);
+    color: var(--color-paper);
+}
+
+:focus-visible {
+    outline: 3px solid var(--color-ink);
+    outline-offset: 2px;
+}
+
+/* wallet adapter */
+.wallet-adapter-button {
+    font-family: var(--font-display) !important;
+    font-size: 16px !important;
+    letter-spacing: 0.06em !important;
+    background: var(--color-ink) !important;
+    color: var(--color-paper) !important;
+    border: 2px solid var(--color-ink) !important;
+    border-radius: 0 !important;
+    box-shadow: 3px 3px 0px color-mix(in srgb, var(--color-ink) 40%, transparent) !important;
+    padding: 8px 18px !important;
+    height: auto !important;
+    transition: transform 0.1s ease, box-shadow 0.1s ease !important;
+}
+
+.wallet-adapter-button:hover {
+    transform: translate(-2px, -2px) !important;
+    box-shadow: 5px 5px 0px color-mix(in srgb, var(--color-ink) 40%, transparent) !important;
+}
+
+.wallet-adapter-button:active {
+    transform: translate(2px, 2px) !important;
+    box-shadow: 1px 1px 0px color-mix(in srgb, var(--color-ink) 40%, transparent) !important;
+}
+
+/* panel */
+.panel {
+    background: var(--color-panel-bg);
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow);
+}
+
+.panel-lg {
+    background: var(--color-panel-bg);
+    border: 3px solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+}
+
+/* btn */
+.btn-comic {
+    display: inline-block;
+    padding: 14px 28px;
+    background: var(--color-ink);
+    color: var(--color-paper);
+    font-family: var(--font-display);
+    font-size: 20px;
+    letter-spacing: 0.06em;
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    text-transform: uppercase;
+}
+
+.btn-comic:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-comic:active {
+    transform: translate(3px, 3px);
+    box-shadow: 1px 1px 0 var(--color-border);
+}
+
+.btn-comic:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: var(--shadow);
+}
+
+.btn-comic-outline {
+    background: transparent;
+    color: var(--color-text);
+}
+
+.btn-comic-outline:hover {
+    background: var(--color-ink);
+    color: var(--color-paper);
+}
+
+/* theme toggle */
+.theme-toggle {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--color-border);
+    box-shadow: 2px 2px 0 var(--color-border);
+    background: var(--color-panel-bg);
+    color: var(--color-text);
+    font-size: 16px;
+    cursor: pointer;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.theme-toggle:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--color-border);
+}
+
+.theme-toggle:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0 var(--color-border);
+}

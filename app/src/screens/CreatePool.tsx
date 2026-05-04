@@ -22,101 +22,102 @@ export default function CreatePool({ onBack, onSuccess }: Props) {
         if (!anchorWallet) return
         setLoading(true)
         try {
-            const provider = new AnchorProvider(connection, anchorWallet, {
-                preflightCommitment: 'confirmed',
-                commitment: 'confirmed',
-            })
+            const provider = new AnchorProvider(connection, anchorWallet, { preflightCommitment: 'confirmed', commitment: 'confirmed' })
             setProvider(provider)
             const program = new Program(IDL as any, provider)
-
             const publicKey = anchorWallet.publicKey
             const [poolPDA] = getPoolPDA(publicKey)
             const [vaultPDA] = getVaultPDA(poolPDA)
-
             console.log('program id:', program.programId.toString())
             console.log('wallet:', publicKey.toString())
             console.log('poolPDA:', poolPDA.toString())
             console.log('vaultPDA:', vaultPDA.toString())
-
             const tx = await program.methods
-                .createPool(
-                    new BN(parseFloat(amount) * 1e9),
-                    parseInt(members),
-                    new BN(parseInt(duration) * 86400)
-                )
-                .accounts({
-                    creator: publicKey,
-                    pool: poolPDA,
-                    vault: vaultPDA,
-                    systemProgram: SystemProgram.programId,
-                })
+                .createPool(new BN(parseFloat(amount) * 1e9), parseInt(members), new BN(parseInt(duration) * 86400))
+                .accounts({ creator: publicKey, pool: poolPDA, vault: vaultPDA, systemProgram: SystemProgram.programId })
                 .transaction()
-
             tx.feePayer = publicKey
             tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
             const signed = await anchorWallet.signTransaction(tx)
-            const sig = await connection.sendRawTransaction(signed.serialize(), {
-                skipPreflight: true,
-            })
+            const sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: true })
             console.log('tx sig:', sig)
             await connection.confirmTransaction(sig, 'confirmed')
-
-            try {
-                const inviteUrl = `${window.location.origin}/?pool=${poolPDA.toString()}`
-                await navigator.clipboard.writeText(inviteUrl)
-            } catch {
-                // clipboard permission denied — non-critical
-            }
-
+            try { await navigator.clipboard.writeText(`${window.location.origin}/?pool=${poolPDA.toString()}`) } catch { }
             onSuccess(poolPDA.toString())
-
         } catch (e: any) {
             console.error('FULL ERROR:', e)
-            console.error('Error logs:', e.logs)
             alert('error: ' + e.message)
         }
         setLoading(false)
     }
 
-    const pot = amount && members
-        ? (parseFloat(amount) * parseInt(members)).toFixed(2)
-        : null
+    const pot = amount && members ? (parseFloat(amount) * parseInt(members)).toFixed(2) : null
+
+    const inputStyle: React.CSSProperties = {
+        width: '100%', padding: '12px 14px',
+        background: '#fff', border: '2px solid #111',
+        boxShadow: '3px 3px 0 #111',
+        fontSize: 14, outline: 'none',
+        fontFamily: 'var(--font-ui)', color: '#111',
+        transition: 'box-shadow 0.1s ease',
+    }
 
     return (
-        <div className="max-w-lg mx-auto px-6 py-12 flex flex-col gap-8">
-            <button onClick={onBack} className="text-zinc-500 hover:text-white text-sm transition">
-                ← back
-            </button>
-            <h2 className="text-2xl font-bold">create a pool</h2>
-            <div className="flex flex-col gap-5">
-                <div className="flex flex-col gap-2">
-                    <label className="text-sm text-zinc-400">contribution per round (SOL)</label>
-                    <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
-                        placeholder="0.5"
-                        className="py-4 px-4 bg-zinc-900 rounded-xl border border-zinc-800 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-600" />
+        <div style={{ maxWidth: 520, margin: '0 auto', padding: '48px 28px', display: 'flex', flexDirection: 'column', gap: 32 }}>
+
+            <div>
+                <button onClick={onBack} style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: '#666', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.05em' }}>
+                    ← BACK
+                </button>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 56, letterSpacing: '0.04em', lineHeight: 0.9 }}>
+                    CREATE<br />A POOL
+                </h2>
+                <p style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: '#666', marginTop: 10 }}>set the rules — your circle follows.</p>
+            </div>
+
+            <div className="panel-lg" style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div>
+                    <label style={{ fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '0.05em', display: 'block', marginBottom: 8 }}>
+                        CONTRIBUTION / ROUND (SOL)
+                    </label>
+                    <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.10" style={inputStyle}
+                        onFocus={e => (e.currentTarget.style.boxShadow = '5px 5px 0 #111')}
+                        onBlur={e => (e.currentTarget.style.boxShadow = '3px 3px 0 #111')} />
                 </div>
-                <div className="flex flex-col gap-2">
-                    <label className="text-sm text-zinc-400">number of members</label>
-                    <input type="number" value={members} onChange={e => setMembers(e.target.value)}
-                        placeholder="5"
-                        className="py-4 px-4 bg-zinc-900 rounded-xl border border-zinc-800 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-600" />
+                <div>
+                    <label style={{ fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '0.05em', display: 'block', marginBottom: 8 }}>
+                        NUMBER OF MEMBERS
+                    </label>
+                    <input type="number" value={members} onChange={e => setMembers(e.target.value)} placeholder="5" style={inputStyle}
+                        onFocus={e => (e.currentTarget.style.boxShadow = '5px 5px 0 #111')}
+                        onBlur={e => (e.currentTarget.style.boxShadow = '3px 3px 0 #111')} />
                 </div>
-                <div className="flex flex-col gap-2">
-                    <label className="text-sm text-zinc-400">round duration (days)</label>
-                    <input type="number" value={duration} onChange={e => setDuration(e.target.value)}
-                        placeholder="7"
-                        className="py-4 px-4 bg-zinc-900 rounded-xl border border-zinc-800 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-600" />
+                <div>
+                    <label style={{ fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '0.05em', display: 'block', marginBottom: 8 }}>
+                        ROUND DURATION (DAYS)
+                    </label>
+                    <input type="number" value={duration} onChange={e => setDuration(e.target.value)} placeholder="7" style={inputStyle}
+                        onFocus={e => (e.currentTarget.style.boxShadow = '5px 5px 0 #111')}
+                        onBlur={e => (e.currentTarget.style.boxShadow = '3px 3px 0 #111')} />
                 </div>
+
                 {pot && (
-                    <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
-                        <p className="text-zinc-400 text-sm">each round, the winner receives</p>
-                        <p className="text-2xl font-bold mt-1">{pot} SOL</p>
+                    <div style={{
+                        background: '#111', border: '2px solid #111', padding: '16px 20px',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    }}>
+                        <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: '#999', letterSpacing: '0.08em', textTransform: 'uppercase' }}>pot per round</span>
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: '#f5f2eb', letterSpacing: '0.04em' }}>
+                            {pot} SOL
+                        </span>
                     </div>
                 )}
+
                 <button onClick={handleCreate}
                     disabled={!amount || !members || !duration || loading}
-                    className="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
-                    {loading ? 'creating...' : 'create pool'}
+                    className="btn-comic"
+                    style={{ width: '100%', textAlign: 'center', fontSize: 20 }}>
+                    {loading ? 'CONFIRMING...' : 'CREATE POOL →'}
                 </button>
             </div>
         </div>

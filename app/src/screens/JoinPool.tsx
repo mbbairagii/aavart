@@ -29,10 +29,7 @@ export default function JoinPool({ poolAddress, onBack, onSuccess }: Props) {
     const [error, setError] = useState<string | null>(null)
     const [joined, setJoined] = useState(false)
 
-    const poolPubkey = (() => {
-        try { return new PublicKey(poolAddress) }
-        catch { return null }
-    })()
+    const poolPubkey = (() => { try { return new PublicKey(poolAddress) } catch { return null } })()
 
     useEffect(() => {
         if (!poolPubkey || !anchorWallet) { setFetching(false); return }
@@ -41,10 +38,7 @@ export default function JoinPool({ poolAddress, onBack, onSuccess }: Props) {
 
     async function getProgram() {
         if (!anchorWallet) throw new Error('wallet not connected')
-        const provider = new AnchorProvider(connection, anchorWallet, {
-            preflightCommitment: 'confirmed',
-            commitment: 'confirmed',
-        })
+        const provider = new AnchorProvider(connection, anchorWallet, { preflightCommitment: 'confirmed', commitment: 'confirmed' })
         setProvider(provider)
         return new Program(IDL as any, provider)
     }
@@ -56,181 +50,126 @@ export default function JoinPool({ poolAddress, onBack, onSuccess }: Props) {
             const program = await getProgram()
             const data = await (program.account as any).pool.fetch(poolPubkey)
             setPoolData(data as PoolData)
-        } catch {
-            setError('pool not found or invalid address')
-        }
+        } catch { setError('pool not found or invalid address') }
         setFetching(false)
     }
 
     async function handleJoin() {
         if (!anchorWallet || !poolPubkey || !poolData) return
-        setLoading(true)
-        setError(null)
+        setLoading(true); setError(null)
         try {
             const program = await getProgram()
             const [vaultPDA] = getVaultPDA(poolPubkey)
-
-            const tx = await program.methods
-                .joinPool()
-                .accounts({
-                    member: anchorWallet.publicKey,
-                    pool: poolPubkey,
-                    vault: vaultPDA,
-                    systemProgram: SystemProgram.programId,
-                })
+            const tx = await program.methods.joinPool()
+                .accounts({ member: anchorWallet.publicKey, pool: poolPubkey, vault: vaultPDA, systemProgram: SystemProgram.programId })
                 .transaction()
-
             tx.feePayer = anchorWallet.publicKey
             tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
             const signed = await anchorWallet.signTransaction(tx)
-            const sig = await connection.sendRawTransaction(signed.serialize(), {
-                skipPreflight: true,
-            })
-            console.log('join tx sig:', sig)
+            const sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: true })
             await connection.confirmTransaction(sig, 'confirmed')
-
-            setJoined(true)
-            await fetchPool()
+            setJoined(true); await fetchPool()
             setTimeout(() => onSuccess(poolAddress), 1500)
-        } catch (e: any) {
-            console.error('logs:', e.logs)
-            console.error('full:', e)
-            setError(e.message)
-        }
+        } catch (e: any) { setError(e.message) }
         setLoading(false)
     }
 
-    const isAlreadyMember = poolData && anchorWallet
-        ? poolData.members.some(m => m.toString() === anchorWallet.publicKey.toString())
-        : false
-
-    const isFull = poolData
-        ? poolData.members.length >= poolData.maxMembers
-        : false
-
-    const statusLabel = poolData
-        ? Object.keys(poolData.status)[0] === 'waitingForMembers'
-            ? 'waiting for members'
-            : Object.keys(poolData.status)[0] === 'active'
-                ? 'active'
-                : 'complete'
-        : null
-
-    const contributionSOL = poolData
-        ? (poolData.contributionAmount.toNumber() / 1e9).toFixed(2)
-        : null
-
-    const potSOL = poolData
-        ? (poolData.contributionAmount.toNumber() * poolData.maxMembers / 1e9).toFixed(2)
-        : null
-
-    const durationDays = poolData
-        ? Math.round(poolData.roundDuration.toNumber() / 86400)
-        : null
+    const isAlreadyMember = poolData && anchorWallet ? poolData.members.some(m => m.toString() === anchorWallet.publicKey.toString()) : false
+    const isFull = poolData ? poolData.members.length >= poolData.maxMembers : false
+    const statusKey = poolData ? Object.keys(poolData.status)[0] : null
+    const statusLabel = statusKey === 'waitingForMembers' ? 'WAITING FOR MEMBERS' : statusKey === 'active' ? 'ACTIVE' : 'COMPLETE'
+    const contributionSOL = poolData ? (poolData.contributionAmount.toNumber() / 1e9).toFixed(2) : null
+    const potSOL = poolData ? (poolData.contributionAmount.toNumber() * poolData.maxMembers / 1e9).toFixed(2) : null
+    const durationDays = poolData ? Math.round(poolData.roundDuration.toNumber() / 86400) : null
 
     return (
-        <div className="max-w-lg mx-auto px-6 py-12 flex flex-col gap-8">
-            <button onClick={onBack} className="text-zinc-500 hover:text-white text-sm transition">
-                ← back
-            </button>
-
-            <h2 className="text-2xl font-bold">join pool</h2>
-
-            <div className="bg-zinc-900 rounded-xl p-3 border border-zinc-800">
-                <p className="text-zinc-500 text-xs font-mono break-all">{poolAddress}</p>
+        <div style={{ maxWidth: 520, margin: '0 auto', padding: '48px 28px', display: 'flex', flexDirection: 'column', gap: 28 }}>
+            <div>
+                <button onClick={onBack} style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: '#666', marginBottom: 20, letterSpacing: '0.05em' }}>← BACK</button>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 56, letterSpacing: '0.04em', lineHeight: 0.9 }}>JOIN<br />A POOL</h2>
             </div>
 
-            {fetching && (
-                <div className="text-zinc-500 text-sm animate-pulse">loading pool...</div>
-            )}
+            <div style={{ background: '#fff', border: '2px solid #111', padding: '10px 14px', boxShadow: '3px 3px 0 #111' }}>
+                <p style={{ fontSize: 11, fontFamily: 'monospace', color: '#666', wordBreak: 'break-all' }}>{poolAddress}</p>
+            </div>
+
+            {fetching && <p style={{ fontFamily: 'var(--font-display)', fontSize: 20, letterSpacing: '0.06em' }}>LOADING...</p>}
 
             {!fetching && error && (
-                <div className="bg-red-950 border border-red-800 rounded-xl p-4 text-red-400 text-sm">
-                    {error}
+                <div style={{ background: '#fff', border: '2px solid #111', boxShadow: '3px 3px 0 #111', padding: '14px 18px', fontSize: 13, fontFamily: 'var(--font-ui)', color: '#c00' }}>
+                    ✗ {error}
                 </div>
             )}
 
             {!fetching && poolData && (
                 <>
-                    <div className="flex flex-col gap-3">
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
-                                <p className="text-zinc-500 text-xs mb-1">contribution</p>
-                                <p className="text-xl font-bold">{contributionSOL} SOL</p>
-                            </div>
-                            <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
-                                <p className="text-zinc-500 text-xs mb-1">pot per round</p>
-                                <p className="text-xl font-bold">{potSOL} SOL</p>
-                            </div>
-                            <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
-                                <p className="text-zinc-500 text-xs mb-1">members</p>
-                                <p className="text-xl font-bold">
-                                    {poolData.members.length} / {poolData.maxMembers}
-                                </p>
-                            </div>
-                            <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
-                                <p className="text-zinc-500 text-xs mb-1">round duration</p>
-                                <p className="text-xl font-bold">{durationDays}d</p>
-                            </div>
+                    <div className="panel-lg" style={{ padding: 0, overflow: 'hidden' }}>
+                        <div style={{
+                            background: '#111', padding: '10px 18px',
+                            fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '0.1em', color: '#f5f2eb',
+                            display: 'flex', justifyContent: 'space-between',
+                        }}>
+                            <span>{statusLabel}</span>
+                            <span>{poolData.members.length}/{poolData.maxMembers} MEMBERS</span>
                         </div>
-
-                        <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${statusLabel === 'waiting for members' ? 'bg-yellow-400' :
-                                statusLabel === 'active' ? 'bg-green-400' : 'bg-zinc-500'
-                                }`} />
-                            <span className="text-sm text-zinc-400">{statusLabel}</span>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '2px solid #111' }}>
+                            {[
+                                { label: 'CONTRIBUTION', value: `${contributionSOL} SOL` },
+                                { label: 'POT / ROUND', value: `${potSOL} SOL` },
+                                { label: 'DURATION', value: `${durationDays} DAYS` },
+                                { label: 'SPOTS LEFT', value: `${poolData.maxMembers - poolData.members.length}` },
+                            ].map((s, i) => (
+                                <div key={s.label} style={{
+                                    padding: '16px 18px',
+                                    borderRight: i % 2 === 0 ? '2px solid #111' : 'none',
+                                    borderBottom: i < 2 ? '2px solid #111' : 'none',
+                                }}>
+                                    <div style={{ fontFamily: 'var(--font-ui)', fontSize: 10, color: '#888', letterSpacing: '0.08em', marginBottom: 4 }}>{s.label}</div>
+                                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, letterSpacing: '0.03em' }}>{s.value}</div>
+                                </div>
+                            ))}
                         </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                        <p className="text-sm text-zinc-400">members</p>
-                        {poolData.members.map((m, i) => (
-                            <div key={i} className="flex items-center gap-3 py-2 px-3 bg-zinc-900 rounded-lg border border-zinc-800">
-                                <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
-                                <span className="text-xs font-mono text-zinc-300 truncate">
-                                    {m.toString()}
-                                </span>
-                                {anchorWallet && m.toString() === anchorWallet.publicKey.toString() && (
-                                    <span className="text-xs text-zinc-500 ml-auto flex-shrink-0">you</span>
-                                )}
-                            </div>
-                        ))}
+                        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {poolData.members.map((m, i) => (
+                                <div key={i} style={{
+                                    display: 'flex', alignItems: 'center', gap: 10,
+                                    padding: '8px 12px',
+                                    background: anchorWallet && m.toString() === anchorWallet.publicKey.toString() ? '#111' : '#f5f2eb',
+                                    border: '1px solid #ccc',
+                                }}>
+                                    <div style={{ width: 6, height: 6, background: '#111', borderRadius: '50%', flexShrink: 0 }} />
+                                    <span style={{
+                                        fontSize: 11, fontFamily: 'monospace', flex: 1,
+                                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                        color: anchorWallet && m.toString() === anchorWallet.publicKey.toString() ? '#f5f2eb' : '#333',
+                                    }}>{m.toString()}</span>
+                                    {anchorWallet && m.toString() === anchorWallet.publicKey.toString() && (
+                                        <span style={{ fontSize: 10, color: '#f5f2eb', letterSpacing: '0.06em', fontFamily: 'var(--font-display)' }}>YOU</span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
                     {joined ? (
-                        <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 text-center">
-                            <p className="text-green-400 font-semibold">joined!</p>
-                            <p className="text-zinc-500 text-sm mt-1">
-                                {poolData.members.length >= poolData.maxMembers
-                                    ? 'pool is now active — first round has begun'
-                                    : `waiting for ${poolData.maxMembers - poolData.members.length} more member(s)`}
+                        <div className="panel" style={{ padding: '20px 24px', textAlign: 'center', background: '#111' }}>
+                            <p style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: '#f5f2eb', letterSpacing: '0.05em' }}>JOINED! ✓</p>
+                            <p style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: '#999', marginTop: 6 }}>
+                                {poolData.members.length >= poolData.maxMembers ? 'pool is active — round 1 begins' : `waiting for ${poolData.maxMembers - poolData.members.length} more`}
                             </p>
                         </div>
                     ) : isAlreadyMember ? (
-                        <div className="flex flex-col items-center gap-3 py-4">
-                            <p className="text-zinc-500 text-sm">you're already in this pool</p>
-                            <button
-                                onClick={() => onSuccess(poolAddress)}
-                                className="px-6 py-3 bg-white text-black font-semibold rounded-xl hover:bg-zinc-100 transition text-sm"
-                            >
-                                go to dashboard →
-                            </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                            <p style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: '#666' }}>you're already in this pool</p>
+                            <button onClick={() => onSuccess(poolAddress)} className="btn-comic" style={{ fontSize: 16 }}>GO TO DASHBOARD →</button>
                         </div>
                     ) : isFull ? (
-                        <div className="text-zinc-500 text-sm text-center py-4">
-                            this pool is full
-                        </div>
-                    ) : Object.keys(poolData.status)[0] !== 'waitingForMembers' ? (
-                        <div className="text-zinc-500 text-sm text-center py-4">
-                            this pool is no longer accepting members
-                        </div>
+                        <p style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: '#888', letterSpacing: '0.06em' }}>POOL IS FULL.</p>
+                    ) : statusKey !== 'waitingForMembers' ? (
+                        <p style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: '#888', letterSpacing: '0.06em' }}>NOT ACCEPTING MEMBERS.</p>
                     ) : (
-                        <button
-                            onClick={handleJoin}
-                            disabled={!anchorWallet || loading}
-                            className="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                        >
-                            {loading ? 'joining...' : `join for ${contributionSOL} SOL`}
+                        <button onClick={handleJoin} disabled={!anchorWallet || loading} className="btn-comic" style={{ width: '100%', textAlign: 'center', fontSize: 20 }}>
+                            {loading ? 'CONFIRMING...' : `JOIN FOR ${contributionSOL} SOL →`}
                         </button>
                     )}
                 </>
