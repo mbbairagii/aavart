@@ -12,8 +12,15 @@ export default function IntroOverlay({ onComplete }: Props) {
     const lastPanelRef = useRef<HTMLImageElement>(null)
     const typingRef = useRef<HTMLDivElement>(null)
     const blackCoverRef = useRef<HTMLDivElement>(null)
+    const loadBarRef = useRef<HTMLDivElement>(null)
+    const loadDotRef = useRef<HTMLDivElement>(null)
+    const loadNumRef = useRef<HTMLSpanElement>(null)
+    const loadProgressRef = useRef(0)
 
-    useEffect(() => { runIntro() }, [])
+    useEffect(() => {
+        runIntro()
+        animateLoadBar()
+    }, [])
 
     function animate(duration: number, fn: (t: number) => void): Promise<void> {
         return new Promise(resolve => {
@@ -29,6 +36,32 @@ export default function IntroOverlay({ onComplete }: Props) {
     }
 
     function easeOutCubic(t: number) { return 1 - Math.pow(1 - t, 3) }
+
+    function animateLoadBar() {
+        const bar = loadBarRef.current!
+        const dot = loadDotRef.current!
+        const num = loadNumRef.current!
+        let displayed = 0
+
+        function tick() {
+            const target = loadProgressRef.current
+            displayed += (target - displayed) * 0.06
+            if (Math.abs(target - displayed) < 0.001) displayed = target
+
+            const pct = Math.floor(displayed * 100)
+            bar.style.width = `${displayed * 100}%`
+            dot.style.left = `${displayed * 100}%`
+            num.textContent = `${pct}`
+
+            if (displayed < 1) requestAnimationFrame(tick)
+            else {
+                bar.style.width = '100%'
+                dot.style.left = '100%'
+                num.textContent = '100'
+            }
+        }
+        requestAnimationFrame(tick)
+    }
 
     function startBgScroll() {
         const container = bgScrollRef.current!
@@ -58,13 +91,13 @@ export default function IntroOverlay({ onComplete }: Props) {
         el.style.opacity = '1'
         for (let i = 0; i <= word.length; i++) {
             el.textContent = word.slice(0, i)
+            loadProgressRef.current = (i / word.length) * 0.08
             await new Promise(r => setTimeout(r, 180))
         }
 
-        // small breath after full word
+        loadProgressRef.current = 0.10
         await new Promise(r => setTimeout(r, 400))
 
-        // all kick off together
         el.style.transition = 'opacity 0.4s ease'
         el.style.opacity = '0'
 
@@ -82,6 +115,8 @@ export default function IntroOverlay({ onComplete }: Props) {
 
         dump.style.opacity = '1'
 
+        const panelShare = 0.75 / (imgs.length - 1)
+
         for (let i = 0; i < imgs.length; i++) {
             const img = imgs[i]
             const isLast = i === imgs.length - 1
@@ -93,10 +128,12 @@ export default function IntroOverlay({ onComplete }: Props) {
             img.getBoundingClientRect()
 
             if (isLast) {
+                loadProgressRef.current = 0.88
                 img.style.transition = 'opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1)'
                 img.style.opacity = '1'
                 img.style.transform = 'scale(1) translateZ(0)'
                 await new Promise(r => setTimeout(r, 900))
+                loadProgressRef.current = 0.95
                 img.style.transition = 'all 1.6s cubic-bezier(0.16,1,0.3,1)'
                 img.style.transform = 'scale(1.85) translateZ(0)'
                 img.style.border = 'none'
@@ -104,6 +141,7 @@ export default function IntroOverlay({ onComplete }: Props) {
                 img.style.boxShadow = 'none'
                 await new Promise(r => setTimeout(r, 1700))
             } else {
+                loadProgressRef.current = 0.10 + i * panelShare
                 img.style.transition = 'opacity 0.6s cubic-bezier(0.16,1,0.3,1), transform 0.6s cubic-bezier(0.16,1,0.3,1)'
                 img.style.opacity = '1'
                 img.style.transform = 'translateY(0) scale(1)'
@@ -115,6 +153,7 @@ export default function IntroOverlay({ onComplete }: Props) {
             }
         }
 
+        loadProgressRef.current = 1.0
         await animate(400, t => { flash.style.opacity = String(easeOutCubic(t)) })
         onComplete()
         await animate(500, t => { flash.style.opacity = String(1 - easeOutCubic(t)) })
@@ -144,7 +183,6 @@ export default function IntroOverlay({ onComplete }: Props) {
             overflow: 'hidden',
         }}>
 
-            {/* Grid — always visible */}
             <div style={{
                 position: 'absolute', inset: 0, zIndex: 0,
                 backgroundImage: `
@@ -154,13 +192,10 @@ export default function IntroOverlay({ onComplete }: Props) {
                 backgroundSize: '48px 48px',
             }} />
 
-            {/* Scrolling bg — zIndex 1 */}
             <div ref={bgWrapRef} style={{
                 position: 'absolute', inset: 0, zIndex: 1,
-                display: 'none',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                overflow: 'hidden',
+                display: 'none', flexDirection: 'column',
+                justifyContent: 'center', overflow: 'hidden',
                 pointerEvents: 'none',
             }}>
                 <div ref={bgScrollRef} style={{
@@ -172,10 +207,8 @@ export default function IntroOverlay({ onComplete }: Props) {
                             fontFamily: "'Bebas Neue', sans-serif",
                             fontSize: 'clamp(72px, 12vw, 160px)',
                             letterSpacing: '0.12em',
-                            color: cfg.color,
-                            lineHeight: 1,
-                            userSelect: 'none',
-                            marginLeft: cfg.ml,
+                            color: cfg.color, lineHeight: 1,
+                            userSelect: 'none', marginLeft: cfg.ml,
                         }}>
                             {rowText}
                         </div>
@@ -183,29 +216,20 @@ export default function IntroOverlay({ onComplete }: Props) {
                 </div>
             </div>
 
-            {/* Black cover — hides bg during typing */}
             <div ref={blackCoverRef} style={{
                 position: 'absolute', inset: 0, zIndex: 2,
-                background: '#000',
-                opacity: 1,
-                pointerEvents: 'none',
+                background: '#000', opacity: 1, pointerEvents: 'none',
             }} />
 
-            {/* Typing word — above black cover */}
             <div ref={typingRef} style={{
                 position: 'absolute', zIndex: 4,
                 fontFamily: "'Bebas Neue', sans-serif",
                 fontSize: 'clamp(120px, 26vw, 340px)',
-                letterSpacing: '0.1em',
-                color: '#C8C4BC',
-                userSelect: 'none',
-                lineHeight: 1,
-                opacity: 0,
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none',
+                letterSpacing: '0.1em', color: '#C8C4BC',
+                userSelect: 'none', lineHeight: 1,
+                opacity: 0, whiteSpace: 'nowrap', pointerEvents: 'none',
             }} />
 
-            {/* Panels */}
             <div ref={dumpRef} style={{
                 position: 'absolute', inset: 0, zIndex: 5,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -217,13 +241,11 @@ export default function IntroOverlay({ onComplete }: Props) {
                         <img
                             key={i}
                             ref={isLast ? lastPanelRef : undefined}
-                            src={src}
-                            alt={`Panel ${i + 1}`}
+                            src={src} alt={`Panel ${i + 1}`}
                             className="intro-panel"
                             style={{
                                 position: 'absolute',
-                                height: 'clamp(300px, 52vh, 560px)',
-                                width: 'auto',
+                                height: 'clamp(300px, 52vh, 560px)', width: 'auto',
                                 objectFit: 'contain',
                                 border: '2px solid rgba(255,255,255,0.85)',
                                 borderRadius: '3px',
@@ -237,12 +259,54 @@ export default function IntroOverlay({ onComplete }: Props) {
                 })}
             </div>
 
-            {/* Black flash */}
+            <div style={{
+                position: 'absolute', bottom: 0, left: 0, right: 0,
+                zIndex: 15, padding: '0 32px 36px',
+                display: 'flex', flexDirection: 'column', gap: 10,
+            }}>
+                <div style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+                }}>
+                    <span style={{
+                        fontFamily: "'Bebas Neue', sans-serif",
+                        fontSize: 13, letterSpacing: '0.22em',
+                        color: 'rgba(255,255,255,0.4)',
+                    }}>
+                        LOADING AAVART
+                    </span>
+                    <span style={{
+                        fontFamily: "'Bebas Neue', sans-serif",
+                        fontSize: 28, letterSpacing: '0.04em',
+                        color: '#fff', lineHeight: 1,
+                    }}>
+                        <span ref={loadNumRef}>0</span>%
+                    </span>
+                </div>
+
+                <div style={{
+                    width: '100%', height: 3,
+                    background: 'rgba(255,255,255,0.1)',
+                    position: 'relative',
+                }}>
+                    <div ref={loadBarRef} style={{
+                        position: 'absolute', top: 0, left: 0,
+                        height: '100%', width: '0%',
+                        background: '#fff',
+                        boxShadow: '0 0 10px rgba(255,255,255,0.5), 0 0 20px rgba(255,255,255,0.15)',
+                    }} />
+                    <div ref={loadDotRef} style={{
+                        position: 'absolute', top: '50%', left: '0%',
+                        transform: 'translate(-50%, -50%)',
+                        width: 7, height: 7, borderRadius: '50%',
+                        background: '#fff',
+                        boxShadow: '0 0 8px 4px rgba(255,255,255,0.65)',
+                    }} />
+                </div>
+            </div>
+
             <div ref={flashRef} style={{
                 position: 'absolute', inset: 0, zIndex: 20,
-                background: '#000',
-                opacity: 0,
-                pointerEvents: 'none',
+                background: '#000', opacity: 0, pointerEvents: 'none',
             }} />
         </div>
     )

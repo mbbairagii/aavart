@@ -1,11 +1,11 @@
 import { useState } from 'react'
+import SideCard from '../components/SideCard'
 
 interface Props {
     onCreatePool: () => void
     onJoinPool: (address: string) => void
 }
 
-// Manga speech bubble
 function Bubble({ text, style }: { text: string; style?: React.CSSProperties }) {
     return (
         <div style={{
@@ -29,7 +29,6 @@ function Bubble({ text, style }: { text: string; style?: React.CSSProperties }) 
     )
 }
 
-// Manga rain/speed lines SVG
 function RainLines({ color = 'currentColor', opacity = 0.15 }: { color?: string; opacity?: number }) {
     return (
         <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity }} aria-hidden>
@@ -59,7 +58,6 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
         onJoinPool(trimmed)
     }
 
-    // panel border style
     const panel: React.CSSProperties = {
         border: '3px solid var(--color-ink)',
         position: 'relative',
@@ -76,9 +74,9 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
     return (
         <div style={{ background: 'var(--color-bg)' }}>
 
-            {/* ── HERO ── */}
+            <SideCard onJoinPool={() => onJoinPool('')} onCreatePool={onCreatePool} />
+
             <div style={{ position: 'relative', overflow: 'hidden', borderBottom: '3px solid var(--color-ink)' }}>
-                {/* sunburst SVG behind everything */}
                 <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice"
                     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 0 }}
                     className="sunburst-light">
@@ -158,7 +156,6 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                             </div>
                         </div>
 
-                        {/* stat panels right side */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 0, border: '3px solid var(--color-ink)', boxShadow: '5px 5px 0 var(--color-border)' }}>
                             <div style={{ ...panel, padding: '28px 24px', borderBottom: '3px solid var(--color-ink)', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
                                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 52, lineHeight: 1, color: 'var(--color-ink)' }}>₹50B</div>
@@ -177,7 +174,6 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                 </div>
             </div>
 
-            {/* ── HOW IT WORKS — REAL MANGA PANEL LAYOUT ── */}
             <div style={{ maxWidth: 1100, margin: '0 auto', padding: '72px 28px 96px' }}>
 
                 <div style={{ marginBottom: 40 }}>
@@ -187,18 +183,13 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                     </h2>
                 </div>
 
-                {/* MANGA PAGE LAYOUT — asymmetric like the reference */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: 'var(--color-ink)', padding: 6, boxShadow: '6px 6px 0 var(--color-border)' }}>
 
-                    {/* ROW 1: two small panels left + one tall right */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 6, alignItems: 'stretch' }}>
-                        {/* left col: two stacked small panels */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
 
-                            {/* panel 1 — CREATE (small, intense) */}
                             <div style={{ ...panelDark, minHeight: 160, padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
                                 <RainLines color="var(--color-paper)" opacity={0.07} />
-                                {/* bubble */}
                                 <div style={{
                                     alignSelf: 'flex-end', marginBottom: 12,
                                     background: 'var(--color-paper)', border: '2px solid var(--color-paper)',
@@ -224,7 +215,6 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                                 </div>
                             </div>
 
-                            {/* panel 2 — INVITE (small) */}
                             <div style={{ ...panel, minHeight: 160, padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
                                 <RainLines color="var(--color-ink)" opacity={0.07} />
                                 <div style={{ position: 'relative', zIndex: 2 }}>
@@ -234,7 +224,6 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                                         Share your link. Circle joins & locks funds.
                                     </div>
                                 </div>
-                                {/* bubble top right */}
                                 <div style={{
                                     position: 'absolute', top: 16, right: 16,
                                     background: 'var(--color-ink)', border: '2px solid var(--color-ink)',
@@ -254,10 +243,8 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                             </div>
                         </div>
 
-                        {/* panel 3 — ROTATE (tall, dramatic, dark) */}
                         <div style={{ ...panelDark, minHeight: 326, padding: 32, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                             <RainLines color="var(--color-paper)" opacity={0.06} />
-                            {/* big speech bubble top */}
                             <div style={{
                                 alignSelf: 'flex-end',
                                 background: 'var(--color-paper)', border: '2px solid var(--color-paper)',
@@ -275,7 +262,6 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                                 }} />
                             </div>
 
-                            {/* giant step number watermark */}
                             <div style={{
                                 position: 'absolute', bottom: -10, right: 10,
                                 fontFamily: 'var(--font-display)', fontSize: 140,
@@ -293,11 +279,9 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                         </div>
                     </div>
 
-                    {/* ROW 2: one wide panel spanning full width */}
                     <div style={{ ...panel, minHeight: 200, padding: '36px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 40, position: 'relative' }}>
                         <RainLines color="var(--color-ink)" opacity={0.05} />
 
-                        {/* giant watermark */}
                         <div style={{
                             position: 'absolute', bottom: -20, left: 20,
                             fontFamily: 'var(--font-display)', fontSize: 200,
@@ -317,7 +301,6 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                             <div style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--color-text-muted)', lineHeight: 1.6 }}>
                                 Until every member has received their lump sum. No losers. No middlemen. The contract handles it all.
                             </div>
-                            {/* speech bubble */}
                             <div style={{
                                 display: 'inline-flex', alignSelf: 'flex-start',
                                 background: 'var(--color-ink)', color: 'var(--color-paper)',
