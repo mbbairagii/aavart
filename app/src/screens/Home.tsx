@@ -1,51 +1,100 @@
-import { useState } from 'react'
-import SideCard from '../components/SideCard'
+import { useState, useEffect, useRef } from 'react'
 
 interface Props {
     onCreatePool: () => void
     onJoinPool: (address: string) => void
 }
 
-function Bubble({ text, style }: { text: string; style?: React.CSSProperties }) {
-    return (
-        <div style={{
-            position: 'absolute',
-            background: 'var(--color-paper)',
-            border: '2px solid var(--color-ink)',
-            borderRadius: '50%',
-            padding: '10px 16px',
-            fontFamily: 'var(--font-display)',
-            fontSize: 13,
-            letterSpacing: '0.04em',
-            lineHeight: 1.3,
-            color: 'var(--color-ink)',
-            textAlign: 'center',
-            zIndex: 10,
-            maxWidth: 140,
-            ...style,
-        }}>
-            {text}
-        </div>
-    )
-}
+const SERIF = "'Instrument Serif', Georgia, serif"
+const SANS = "'DM Sans', sans-serif"
+const BG = '#0a0a0a'
+const FG = '#ddd9d0'
+const BORDER = 'rgba(221,217,208,0.08)'
+const MUTED = 'rgba(221,217,208,0.30)'
 
-function RainLines({ color = 'currentColor', opacity = 0.15 }: { color?: string; opacity?: number }) {
-    return (
-        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity }} aria-hidden>
-            {Array.from({ length: 40 }, (_, i) => (
-                <line
-                    key={i}
-                    x1={`${(i / 40) * 100 + Math.random() * 5}%`} y1="0"
-                    x2={`${(i / 40) * 100 - 3 + Math.random() * 5}%`} y2="100%"
-                    stroke={color} strokeWidth="0.8"
-                />
-            ))}
-        </svg>
-    )
-}
+const steps = [
+    { n: '01', t: 'Create', d: 'Set your contribution amount, number of members, and round duration. Deploy in one click.' },
+    { n: '02', t: 'Invite', d: 'Share your pool link. Members join and lock their SOL. The contract enforces everything.' },
+    { n: '03', t: 'Rotate', d: 'Every round, all members contribute. One recipient claims the full pot. Transparent. On-chain.' },
+    { n: '04', t: 'Repeat', d: 'Until every member has received their lump sum. No losers. No middlemen. Done.' },
+]
+
+const docsSections = [
+    {
+        label: '01 — What is Aavart?',
+        body: `Aavart is a decentralised chit fund built on the Solana blockchain. A chit fund — called "aavart" (आवर्त) in Hindi, meaning "cycle" or "rotation" — is one of the oldest savings instruments in South Asia. A group of people pool a fixed amount every period, and each member takes turns receiving the entire pot. Everyone saves, everyone wins, in rotation.
+
+Aavart brings this centuries-old practice on-chain, making it trustless, transparent, and global. No rotating trust. No handshakes. The contract is the guarantee.`
+    },
+    {
+        label: '02 — Why was it built?',
+        body: `Traditional chit funds rely entirely on a fund manager — someone you trust to collect money, hold it, and pay it out fairly. That trust creates risk: managers can disappear, delay payouts, or mismanage funds. Informal circles among friends suffer the same problem — one person stops contributing and the whole circle breaks.
+
+Aavart eliminates the manager entirely. A Solana smart contract enforces every rule: contribution deadlines, payout order, and fund release. Nobody can cheat. Nobody can disappear with the pot. The contract doesn't sleep, doesn't have a bad month, and can't be bribed.`
+    },
+    {
+        label: '03 — How does it work?',
+        body: `A pool creator sets three parameters: the contribution amount (in SOL), the number of members, and the round duration (e.g. weekly, monthly). The contract is deployed with these parameters locked in.
+
+Members join by connecting their Solana wallet and locking their participation. Once all slots are filled, the pool activates. Each round, members send their contribution to the contract. At round close, the contract automatically releases the full pot to the designated recipient for that round — determined by the order set at creation. The cycle repeats until every member has received their turn. No manual intervention. No exceptions.`
+    },
+    {
+        label: '04 — How was it built?',
+        body: `Aavart is built with Anchor, the Rust framework for Solana programs. The on-chain program manages pool state, tracks contributions per round, validates wallet addresses, and handles atomic SOL transfers directly between participants — no custodial wallet, no intermediary account.
+
+The frontend is React + TypeScript, using the Solana Wallet Adapter for wallet connection and @solana/web3.js for program interaction. Transactions are simulated client-side before submission so users can preview exactly what will happen. The UI intentionally strips away web3 complexity — pool creation feels as simple as filling a form.`
+    },
+    {
+        label: '05 — Is it safe?',
+        body: `The program logic is open-source and auditable. Because every rule is enforced at the contract level, there is no human in the loop who can misuse funds. Members can verify the pool parameters on-chain before joining — contribution amount, member count, and round schedule are all public.
+
+That said, Aavart is an early-stage project. Smart contracts can have bugs, and Solana programs are immutable once deployed. Use it with amounts you are comfortable putting on-chain, and always verify the program ID before interacting with any pool.`
+    },
+]
 
 export default function Home({ onCreatePool, onJoinPool }: Props) {
     const [inviteInput, setInviteInput] = useState('')
+    const [joinOpen, setJoinOpen] = useState(false)
+    const [scrolled, setScrolled] = useState(false)
+    const [howOpen, setHowOpen] = useState(false)
+    const [whatOpen, setWhatOpen] = useState(false)
+    const [docsOpen, setDocsOpen] = useState(false)
+    const [footerVisible, setFooterVisible] = useState(false)
+    const footerRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        const onScroll = () => setScrolled(window.scrollY > 60)
+        window.addEventListener('scroll', onScroll, { passive: true })
+        return () => window.removeEventListener('scroll', onScroll)
+    }, [])
+
+    useEffect(() => {
+        const obs = new IntersectionObserver(
+            ([entry]) => setFooterVisible(entry.isIntersecting),
+            { threshold: 0.15 }
+        )
+        if (footerRef.current) obs.observe(footerRef.current)
+        return () => obs.disconnect()
+    }, [])
+
+    useEffect(() => {
+        const fn = (e: MouseEvent) => {
+            const t = e.target as HTMLElement
+            if (!t.closest('[data-nav-area]')) {
+                setHowOpen(false)
+                setWhatOpen(false)
+                setJoinOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', fn)
+        return () => document.removeEventListener('mousedown', fn)
+    }, [])
+
+    // lock body scroll when docs open
+    useEffect(() => {
+        document.body.style.overflow = docsOpen ? 'hidden' : ''
+        return () => { document.body.style.overflow = '' }
+    }, [docsOpen])
 
     function handleJoin() {
         const trimmed = inviteInput.trim()
@@ -58,279 +107,469 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
         onJoinPool(trimmed)
     }
 
-    const panel: React.CSSProperties = {
-        border: '3px solid var(--color-ink)',
-        position: 'relative',
-        overflow: 'hidden',
-        background: 'var(--color-paper)',
-        color: 'var(--color-ink)',
-    }
-    const panelDark: React.CSSProperties = {
-        ...panel,
-        background: 'var(--color-ink)',
-        color: 'var(--color-paper)',
+    const navBtnBase: React.CSSProperties = {
+        fontFamily: SANS, fontSize: 11,
+        letterSpacing: '0.07em',
+        background: 'none', border: 'none',
+        padding: '10px 16px', cursor: 'pointer',
+        transition: 'color 0.12s',
+        color: MUTED,
     }
 
     return (
-        <div style={{ background: 'var(--color-bg)' }}>
+        <div style={{ background: BG, color: FG, minHeight: '100vh' }}>
 
-            <SideCard onJoinPool={() => onJoinPool('')} onCreatePool={onCreatePool} />
+            {/* ── NAV ── */}
+            <nav
+                data-nav-area
+                style={{
+                    position: 'fixed', top: 20, left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 600,
+                    display: 'flex', alignItems: 'center',
+                    background: scrolled ? 'rgba(10,10,10,0.97)' : 'rgba(10,10,10,0.6)',
+                    backdropFilter: 'blur(20px)',
+                    border: `1px solid ${BORDER}`,
+                    borderRadius: 999,
+                    padding: '0 6px',
+                    transition: 'background 0.25s',
+                    whiteSpace: 'nowrap' as const,
+                    gap: 2,
+                }}>
 
-            <div style={{ position: 'relative', overflow: 'hidden', borderBottom: '3px solid var(--color-ink)' }}>
-                <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice"
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 0 }}
-                    className="sunburst-light">
-                    {Array.from({ length: 36 }, (_, i) => {
-                        const a1 = (i / 36) * 360, a2 = ((i + 0.5) / 36) * 360, r = 1200
-                        const cx = 400, cy = 300
-                        return <polygon key={i} points={`${cx},${cy} ${cx + r * Math.cos(a1 * Math.PI / 180)},${cy + r * Math.sin(a1 * Math.PI / 180)} ${cx + r * Math.cos(a2 * Math.PI / 180)},${cy + r * Math.sin(a2 * Math.PI / 180)}`}
-                            fill={i % 2 === 0 ? '#c8c4bb' : 'transparent'} opacity="0.35" />
-                    })}
-                </svg>
-                <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice"
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 0 }}
-                    className="sunburst-dark">
-                    {Array.from({ length: 36 }, (_, i) => {
-                        const a1 = (i / 36) * 360, a2 = ((i + 0.5) / 36) * 360, r = 1200
-                        const cx = 400, cy = 300
-                        return <polygon key={i} points={`${cx},${cy} ${cx + r * Math.cos(a1 * Math.PI / 180)},${cy + r * Math.sin(a1 * Math.PI / 180)} ${cx + r * Math.cos(a2 * Math.PI / 180)},${cy + r * Math.sin(a2 * Math.PI / 180)}`}
-                            fill={i % 2 === 0 ? '#2a2a2a' : 'transparent'} opacity="0.65" />
-                    })}
-                </svg>
+                <span style={{
+                    fontFamily: SERIF, fontStyle: 'italic',
+                    fontSize: 14, color: FG,
+                    padding: '10px 18px',
+                    borderRight: `1px solid ${BORDER}`,
+                    letterSpacing: '0.01em',
+                }}>Aavart</span>
 
-                <div style={{ position: 'relative', zIndex: 1, maxWidth: 1100, margin: '0 auto', padding: '56px 28px 64px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 420px', alignItems: 'center', gap: 48 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+                <button
+                    style={{ ...navBtnBase, color: howOpen ? FG : MUTED }}
+                    onClick={() => { setHowOpen(v => !v); setWhatOpen(false); setJoinOpen(false) }}
+                    onMouseEnter={e => (e.currentTarget.style.color = FG)}
+                    onMouseLeave={e => (e.currentTarget.style.color = howOpen ? FG : MUTED)}
+                >How it works</button>
+
+                <div style={{ width: 1, height: 14, background: BORDER }} />
+
+                <button
+                    onClick={onCreatePool}
+                    style={{
+                        fontFamily: SANS, fontSize: 11,
+                        background: FG, color: BG,
+                        border: 'none', borderRadius: 999,
+                        padding: '8px 18px', margin: '4px 2px',
+                        cursor: 'pointer', transition: 'opacity 0.12s',
+                        letterSpacing: '0.04em',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity = '0.72')}
+                    onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                >Create pool</button>
+
+                <button
+                    onClick={() => { setJoinOpen(v => !v); setHowOpen(false); setWhatOpen(false) }}
+                    style={{
+                        fontFamily: SANS, fontSize: 11,
+                        background: 'transparent', color: joinOpen ? FG : MUTED,
+                        border: `1px solid ${joinOpen ? 'rgba(221,217,208,0.25)' : 'rgba(221,217,208,0.1)'}`,
+                        borderRadius: 999,
+                        padding: '7px 16px', margin: '4px 2px 4px 0',
+                        cursor: 'pointer', transition: 'all 0.12s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(221,217,208,0.3)'; e.currentTarget.style.color = FG }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = joinOpen ? 'rgba(221,217,208,0.25)' : 'rgba(221,217,208,0.1)'; e.currentTarget.style.color = joinOpen ? FG : MUTED }}
+                >Join</button>
+
+                <div style={{ width: 1, height: 14, background: BORDER }} />
+
+                <button
+                    style={{ ...navBtnBase, color: whatOpen ? FG : MUTED, paddingLeft: 14 }}
+                    onClick={() => { setWhatOpen(v => !v); setHowOpen(false); setJoinOpen(false) }}
+                    onMouseEnter={e => (e.currentTarget.style.color = FG)}
+                    onMouseLeave={e => (e.currentTarget.style.color = whatOpen ? FG : MUTED)}
+                >What is Aavart</button>
+            </nav>
+
+            {/* ── HOW IT WORKS DROPDOWN ── */}
+            <div
+                data-nav-area
+                style={{
+                    position: 'fixed', top: howOpen ? 68 : 62, left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 598,
+                    background: 'rgba(13,13,12,0.98)',
+                    border: `1px solid ${BORDER}`,
+                    borderRadius: 14,
+                    backdropFilter: 'blur(24px)',
+                    boxShadow: '0 24px 56px rgba(0,0,0,0.7)',
+                    width: 560,
+                    overflow: 'hidden',
+                    maxHeight: howOpen ? 340 : 0,
+                    opacity: howOpen ? 1 : 0,
+                    transition: 'max-height 0.28s cubic-bezier(0.16,1,0.3,1), opacity 0.18s ease, top 0.18s ease',
+                    pointerEvents: howOpen ? 'auto' : 'none',
+                }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', borderBottom: `1px solid ${BORDER}` }}>
+                    {steps.map((s, i) => (
+                        <div key={i} style={{
+                            padding: '24px 22px',
+                            borderRight: i < 3 ? `1px solid ${BORDER}` : 'none',
+                        }}>
                             <div style={{
-                                display: 'inline-flex', width: 'fit-content',
-                                background: 'var(--color-panel-bg)', border: '2px solid var(--color-border)',
-                                boxShadow: '3px 3px 0 var(--color-border)',
-                                padding: '5px 14px', fontSize: 11, fontFamily: 'var(--font-ui)',
-                                letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--color-text)',
-                            }}>● LIVE ON SOLANA DEVNET</div>
-
-                            <h1 style={{
-                                fontFamily: 'var(--font-display)', fontSize: 'clamp(64px, 9vw, 118px)',
-                                lineHeight: 0.88, letterSpacing: '0.03em', color: 'var(--color-text)',
-                            }}>
-                                SAVE<br />TOGETHER,<br />
-                                <span style={{ WebkitTextStroke: '3px var(--color-text)', color: 'transparent' }}>WIN<br />TOGETHER.</span>
-                            </h1>
-
-                            <p style={{
-                                fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--color-text-muted)',
-                                maxWidth: 400, lineHeight: 1.7,
-                                borderLeft: '3px solid var(--color-border)', paddingLeft: 16,
-                            }}>
-                                Trustless on-chain chit fund on Solana. Pool funds with your circle, rotate payouts every round — no bank, no middleman.
-                            </p>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 420 }}>
-                                <button onClick={onCreatePool} className="btn-comic" style={{ textAlign: 'center', fontSize: 20, width: '100%' }}>
-                                    CREATE A POOL →
-                                </button>
-                                <div style={{ display: 'flex', gap: 8 }}>
-                                    <input type="text" value={inviteInput}
-                                        onChange={e => setInviteInput(e.target.value)}
-                                        onKeyDown={e => e.key === 'Enter' && handleJoin()}
-                                        placeholder="paste invite link or address..."
-                                        style={{
-                                            flex: 1, padding: '11px 14px',
-                                            background: 'var(--color-panel-bg)', border: '2px solid var(--color-border)',
-                                            boxShadow: '3px 3px 0 var(--color-border)',
-                                            fontSize: 13, outline: 'none', fontFamily: 'var(--font-ui)', color: 'var(--color-text)',
-                                        }} />
-                                    <button onClick={handleJoin} disabled={!inviteInput.trim()}
-                                        className="btn-comic btn-comic-outline"
-                                        style={{ fontSize: 14, padding: '11px 16px', whiteSpace: 'nowrap' as const }}>JOIN</button>
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'flex', gap: 32, paddingTop: 8, borderTop: '2px solid var(--color-border)' }}>
-                                {[['TRUSTLESS', 'smart contract'], ['NON-CUSTODIAL', 'on-chain funds'], ['INSTANT', 'no waiting']].map(([l, s]) => (
-                                    <div key={l}>
-                                        <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '0.05em', color: 'var(--color-text)' }}>{l}</div>
-                                        <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{s}</div>
-                                    </div>
-                                ))}
-                            </div>
+                                fontFamily: SANS, fontSize: 9,
+                                letterSpacing: '0.18em', color: 'rgba(221,217,208,0.22)',
+                                marginBottom: 12,
+                            }}>{s.n}</div>
+                            <div style={{
+                                fontFamily: SERIF, fontSize: 22,
+                                color: FG, marginBottom: 10,
+                                lineHeight: 1, letterSpacing: '-0.01em',
+                            }}>{s.t}</div>
+                            <div style={{
+                                fontFamily: SANS, fontSize: 11,
+                                color: 'rgba(221,217,208,0.38)', lineHeight: 1.75,
+                            }}>{s.d}</div>
                         </div>
+                    ))}
+                </div>
+                <div style={{
+                    padding: '16px 22px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                    <span style={{
+                        fontFamily: SERIF, fontStyle: 'italic',
+                        fontSize: 12, color: 'rgba(221,217,208,0.25)',
+                    }}>On-chain chit fund on Solana</span>
+                    <button onClick={onCreatePool} style={{
+                        fontFamily: SANS, fontSize: 11,
+                        background: FG, color: BG,
+                        border: 'none', borderRadius: 6,
+                        padding: '9px 18px', cursor: 'pointer',
+                        transition: 'opacity 0.12s', letterSpacing: '0.04em',
+                    }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = '0.72')}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                    >Create a pool →</button>
+                </div>
+            </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 0, border: '3px solid var(--color-ink)', boxShadow: '5px 5px 0 var(--color-border)' }}>
-                            <div style={{ ...panel, padding: '28px 24px', borderBottom: '3px solid var(--color-ink)', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
-                                <div style={{ fontFamily: 'var(--font-display)', fontSize: 52, lineHeight: 1, color: 'var(--color-ink)' }}>₹50B</div>
-                                <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 6, fontFamily: 'var(--font-ui)' }}>chit funds per year in India alone</div>
-                            </div>
-                            <div style={{ ...panelDark, padding: '28px 24px', borderBottom: '3px solid var(--color-ink)', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
-                                <div style={{ fontFamily: 'var(--font-display)', fontSize: 52, lineHeight: 1, color: 'var(--color-paper)' }}>0%</div>
-                                <div style={{ fontSize: 12, color: 'var(--color-paper)', opacity: 0.6, marginTop: 6, fontFamily: 'var(--font-ui)' }}>interest. zero. none. zilch.</div>
-                            </div>
-                            <div style={{ ...panel, padding: '28px 24px', border: 'none' }}>
-                                <div style={{ fontFamily: 'var(--font-display)', fontSize: 52, lineHeight: 1, color: 'var(--color-ink)' }}>100%</div>
-                                <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 6, fontFamily: 'var(--font-ui)' }}>on-chain. non-custodial. yours.</div>
-                            </div>
-                        </div>
+            {/* ── WHAT IS AAVART DROPDOWN ── */}
+            <div
+                data-nav-area
+                style={{
+                    position: 'fixed', top: whatOpen ? 68 : 62, left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 598,
+                    background: 'rgba(13,13,12,0.98)',
+                    border: `1px solid ${BORDER}`,
+                    borderRadius: 14,
+                    backdropFilter: 'blur(24px)',
+                    boxShadow: '0 24px 56px rgba(0,0,0,0.7)',
+                    width: 420,
+                    overflow: 'hidden',
+                    maxHeight: whatOpen ? 360 : 0,
+                    opacity: whatOpen ? 1 : 0,
+                    transition: 'max-height 0.28s cubic-bezier(0.16,1,0.3,1), opacity 0.18s ease, top 0.18s ease',
+                    pointerEvents: whatOpen ? 'auto' : 'none',
+                }}>
+                <div style={{ padding: '28px 28px 28px' }}>
+                    <div style={{
+                        fontFamily: SANS, fontSize: 9,
+                        letterSpacing: '0.22em', color: 'rgba(221,217,208,0.2)',
+                        textTransform: 'uppercase' as const, marginBottom: 20,
+                    }}>About</div>
+                    <p style={{
+                        fontFamily: SERIF, fontStyle: 'italic',
+                        fontSize: 17, color: FG,
+                        lineHeight: 1.85, marginBottom: 16,
+                    }}>
+                        Aavart is a trustless chit fund on Solana — a rotating savings circle where members pool funds and take turns receiving the full pot.
+                    </p>
+                    <p style={{
+                        fontFamily: SANS, fontSize: 12,
+                        color: 'rgba(221,217,208,0.35)', lineHeight: 1.8,
+                        marginBottom: 28,
+                    }}>
+                        No bank. No middleman. Smart contracts handle contributions, payouts, and enforcement — so your circle runs on code, not trust.
+                    </p>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                        <button onClick={onCreatePool} style={{
+                            fontFamily: SANS, fontSize: 11,
+                            background: FG, color: BG,
+                            border: 'none', borderRadius: 6,
+                            padding: '10px 20px', cursor: 'pointer',
+                            transition: 'opacity 0.12s', letterSpacing: '0.04em',
+                        }}
+                            onMouseEnter={e => (e.currentTarget.style.opacity = '0.72')}
+                            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                        >Get started →</button>
+                        <button
+                            onClick={() => { setDocsOpen(true); setWhatOpen(false) }}
+                            style={{
+                                fontFamily: SANS, fontSize: 11,
+                                background: 'transparent', color: MUTED,
+                                border: `1px solid ${BORDER}`, borderRadius: 6,
+                                padding: '10px 18px', cursor: 'pointer',
+                                transition: 'all 0.12s', letterSpacing: '0.04em',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(221,217,208,0.25)'; e.currentTarget.style.color = FG }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = MUTED }}
+                        >Read the docs</button>
                     </div>
                 </div>
             </div>
 
-            <div style={{ maxWidth: 1100, margin: '0 auto', padding: '72px 28px 96px' }}>
-
-                <div style={{ marginBottom: 40 }}>
-                    <p style={{ fontFamily: 'var(--font-ui)', fontSize: 11, letterSpacing: '0.1em', color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, marginBottom: 6 }}>— HOW IT WORKS</p>
-                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(38px, 5vw, 64px)', letterSpacing: '0.04em', lineHeight: 0.9, color: 'var(--color-text)' }}>
-                        FOUR STEPS.<br />ZERO TRUST.
-                    </h2>
+            {/* ── JOIN INPUT DROPDOWN ── */}
+            {joinOpen && (
+                <div
+                    data-nav-area
+                    style={{
+                        position: 'fixed', top: 68, left: '50%',
+                        transform: 'translateX(-50%)',
+                        zIndex: 597,
+                        background: 'rgba(13,13,12,0.98)',
+                        border: `1px solid ${BORDER}`,
+                        borderRadius: 12, padding: '12px',
+                        display: 'flex', gap: 8,
+                        backdropFilter: 'blur(24px)',
+                        minWidth: 380,
+                        boxShadow: '0 24px 56px rgba(0,0,0,0.7)',
+                    }}>
+                    <input
+                        autoFocus
+                        type="text" value={inviteInput}
+                        onChange={e => setInviteInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleJoin(); if (e.key === 'Escape') setJoinOpen(false) }}
+                        placeholder="Paste invite link or pool address"
+                        style={{
+                            flex: 1, padding: '10px 14px',
+                            background: 'rgba(255,255,255,0.04)',
+                            border: `1px solid ${BORDER}`,
+                            borderRadius: 8, fontSize: 13, outline: 'none',
+                            fontFamily: SANS, color: FG,
+                        }}
+                    />
+                    <button onClick={handleJoin} disabled={!inviteInput.trim()} style={{
+                        fontFamily: SANS, fontSize: 12,
+                        background: FG, color: BG,
+                        border: 'none', borderRadius: 8,
+                        padding: '10px 20px', cursor: 'pointer',
+                        opacity: inviteInput.trim() ? 1 : 0.3,
+                        transition: 'opacity 0.12s',
+                    }}>Join →</button>
                 </div>
+            )}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: 'var(--color-ink)', padding: 6, boxShadow: '6px 6px 0 var(--color-border)' }}>
+            {/* ── HERO ── */}
+            <main>
+                <div style={{
+                    height: '100vh',
+                    display: 'flex', flexDirection: 'column',
+                    justifyContent: 'flex-end',
+                    padding: '0 56px 72px',
+                    borderBottom: `1px solid ${BORDER}`,
+                    position: 'relative',
+                    overflow: 'hidden',
+                }}>
+                    <img
+                        src="/hero-bg.png"
+                        alt=""
+                        style={{
+                            position: 'absolute', inset: 0,
+                            width: '100%', height: '100%',
+                            objectFit: 'cover',
+                            objectPosition: 'center top',
+                            opacity: 0.55,
+                            zIndex: 0,
+                            userSelect: 'none',
+                            pointerEvents: 'none',
+                        }}
+                    />
+                    <div style={{
+                        position: 'absolute', inset: 0, zIndex: 1,
+                        background: 'linear-gradient(to bottom, rgba(10,10,10,0.1) 0%, rgba(10,10,10,0.0) 35%, rgba(10,10,10,0.85) 78%, #0a0a0a 100%)',
+                        pointerEvents: 'none',
+                    }} />
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 6, alignItems: 'stretch' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-
-                            <div style={{ ...panelDark, minHeight: 160, padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-                                <RainLines color="var(--color-paper)" opacity={0.07} />
-                                <div style={{
-                                    alignSelf: 'flex-end', marginBottom: 12,
-                                    background: 'var(--color-paper)', border: '2px solid var(--color-paper)',
-                                    borderRadius: '50%', padding: '8px 12px',
-                                    fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--color-ink)',
-                                    letterSpacing: '0.04em', lineHeight: 1.3, textAlign: 'center',
-                                    position: 'relative', zIndex: 2, maxWidth: 120,
-                                }}>
-                                    SET YOUR<br />TERMS.
-                                    <div style={{
-                                        position: 'absolute', bottom: -7, left: '30%',
-                                        width: 0, height: 0,
-                                        borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
-                                        borderTop: '7px solid var(--color-paper)',
-                                    }} />
-                                </div>
-                                <div style={{ position: 'relative', zIndex: 2 }}>
-                                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, letterSpacing: '0.1em', color: 'var(--color-paper)', opacity: 0.5, marginBottom: 4 }}>STEP 01</div>
-                                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 32, letterSpacing: '0.04em', color: 'var(--color-paper)', lineHeight: 0.9 }}>CREATE</div>
-                                    <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--color-paper)', opacity: 0.65, marginTop: 6 }}>
-                                        Set contribution, members & duration.
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style={{ ...panel, minHeight: 160, padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-                                <RainLines color="var(--color-ink)" opacity={0.07} />
-                                <div style={{ position: 'relative', zIndex: 2 }}>
-                                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, letterSpacing: '0.1em', color: 'var(--color-ink)', opacity: 0.4, marginBottom: 4 }}>STEP 02</div>
-                                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 32, letterSpacing: '0.04em', color: 'var(--color-ink)', lineHeight: 0.9 }}>INVITE</div>
-                                    <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--color-text-muted)', marginTop: 6 }}>
-                                        Share your link. Circle joins & locks funds.
-                                    </div>
-                                </div>
-                                <div style={{
-                                    position: 'absolute', top: 16, right: 16,
-                                    background: 'var(--color-ink)', border: '2px solid var(--color-ink)',
-                                    borderRadius: '50%', padding: '8px 10px',
-                                    fontFamily: 'var(--font-display)', fontSize: 10, color: 'var(--color-paper)',
-                                    letterSpacing: '0.04em', lineHeight: 1.3, textAlign: 'center', maxWidth: 100,
-                                    zIndex: 2,
-                                }}>
-                                    SHARE<br />IT!!
-                                    <div style={{
-                                        position: 'absolute', bottom: -7, right: '25%',
-                                        width: 0, height: 0,
-                                        borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
-                                        borderTop: '7px solid var(--color-ink)',
-                                    }} />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style={{ ...panelDark, minHeight: 326, padding: 32, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                            <RainLines color="var(--color-paper)" opacity={0.06} />
-                            <div style={{
-                                alignSelf: 'flex-end',
-                                background: 'var(--color-paper)', border: '2px solid var(--color-paper)',
-                                borderRadius: '50%', padding: '14px 18px',
-                                fontFamily: 'var(--font-display)', fontSize: 13, color: 'var(--color-ink)',
-                                letterSpacing: '0.04em', lineHeight: 1.3, textAlign: 'center',
-                                position: 'relative', zIndex: 2, maxWidth: 160,
-                            }}>
-                                EVERY ROUND,<br />ONE WINS.
-                                <div style={{
-                                    position: 'absolute', bottom: -8, left: '35%',
-                                    width: 0, height: 0,
-                                    borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
-                                    borderTop: '9px solid var(--color-paper)',
-                                }} />
-                            </div>
-
-                            <div style={{
-                                position: 'absolute', bottom: -10, right: 10,
-                                fontFamily: 'var(--font-display)', fontSize: 140,
-                                color: 'var(--color-paper)', opacity: 0.05,
-                                lineHeight: 1, zIndex: 1, userSelect: 'none',
-                            }}>03</div>
-
-                            <div style={{ position: 'relative', zIndex: 2 }}>
-                                <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, letterSpacing: '0.1em', color: 'var(--color-paper)', opacity: 0.5, marginBottom: 6 }}>STEP 03</div>
-                                <div style={{ fontFamily: 'var(--font-display)', fontSize: 52, letterSpacing: '0.03em', color: 'var(--color-paper)', lineHeight: 0.88 }}>ROTATE</div>
-                                <div style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--color-paper)', opacity: 0.65, marginTop: 10, maxWidth: 280, lineHeight: 1.6 }}>
-                                    Each round, all members contribute. One designated recipient claims the full pot. Transparent. On-chain.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style={{ ...panel, minHeight: 200, padding: '36px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 40, position: 'relative' }}>
-                        <RainLines color="var(--color-ink)" opacity={0.05} />
+                    {/* content */}
+                    <div style={{ position: 'relative', zIndex: 2, marginBottom: 60 }}>
+                        <h1 style={{
+                            fontFamily: SERIF,
+                            fontSize: 'clamp(72px, 14vw, 220px)',
+                            lineHeight: 0.84, letterSpacing: '-0.01em',
+                            color: FG, margin: '0 0 48px',
+                            fontWeight: 400,
+                        }}>
+                            Save<br />
+                            <span style={{ WebkitTextStroke: `1.5px ${FG}`, color: 'transparent' }}>
+                                together.
+                            </span>
+                        </h1>
 
                         <div style={{
-                            position: 'absolute', bottom: -20, left: 20,
-                            fontFamily: 'var(--font-display)', fontSize: 200,
-                            color: 'var(--color-ink)', opacity: 0.04,
-                            lineHeight: 1, zIndex: 0, userSelect: 'none',
-                        }}>04</div>
-
-                        <div style={{ position: 'relative', zIndex: 2 }}>
-                            <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, letterSpacing: '0.1em', color: 'var(--color-text-muted)', marginBottom: 6 }}>STEP 04</div>
-                            <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(48px, 6vw, 80px)', letterSpacing: '0.03em', color: 'var(--color-ink)', lineHeight: 0.88 }}>
-                                REPEAT.<br />
-                                <span style={{ WebkitTextStroke: '2px var(--color-ink)', color: 'transparent' }}>TILL ALL WIN.</span>
-                            </div>
-                        </div>
-
-                        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 340 }}>
-                            <div style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--color-text-muted)', lineHeight: 1.6 }}>
-                                Until every member has received their lump sum. No losers. No middlemen. The contract handles it all.
-                            </div>
-                            <div style={{
-                                display: 'inline-flex', alignSelf: 'flex-start',
-                                background: 'var(--color-ink)', color: 'var(--color-paper)',
-                                border: '2px solid var(--color-ink)',
-                                padding: '10px 18px',
-                                fontFamily: 'var(--font-display)', fontSize: 14,
-                                letterSpacing: '0.06em',
-                                boxShadow: '3px 3px 0 var(--color-border)',
-                                position: 'relative',
+                            display: 'flex', justifyContent: 'space-between',
+                            alignItems: 'flex-end', flexWrap: 'wrap' as const, gap: 24,
+                            paddingTop: 28, borderTop: `1px solid ${BORDER}`,
+                        }}>
+                            <p style={{
+                                fontFamily: SANS, fontSize: 13,
+                                color: MUTED, lineHeight: 1.9,
+                                margin: 0, maxWidth: 280,
                             }}>
-                                EVERYONE WINS!!
-                                <div style={{
-                                    position: 'absolute', bottom: -8, left: 24,
-                                    width: 0, height: 0,
-                                    borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
-                                    borderTop: '8px solid var(--color-ink)',
-                                }} />
+                                Trustless on-chain chit fund on Solana.<br />
+                                Pool funds, rotate payouts.<br />
+                                No bank. No middleman.
+                            </p>
+                            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                <button
+                                    onClick={() => { setHowOpen(v => !v); setWhatOpen(false); setJoinOpen(false) }}
+                                    style={{
+                                        fontFamily: SANS, fontSize: 13,
+                                        background: 'transparent', color: MUTED,
+                                        border: `1px solid ${BORDER}`, borderRadius: 4,
+                                        padding: '13px 24px', cursor: 'pointer',
+                                        transition: 'all 0.12s', letterSpacing: '0.03em',
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.color = FG; e.currentTarget.style.borderColor = 'rgba(221,217,208,0.28)' }}
+                                    onMouseLeave={e => { e.currentTarget.style.color = MUTED; e.currentTarget.style.borderColor = BORDER }}
+                                >How it works</button>
+                                <button onClick={onCreatePool} style={{
+                                    fontFamily: SANS, fontSize: 13,
+                                    background: FG, color: BG,
+                                    border: 'none', borderRadius: 4,
+                                    padding: '13px 28px', cursor: 'pointer',
+                                    transition: 'opacity 0.12s', letterSpacing: '0.03em',
+                                }}
+                                    onMouseEnter={e => (e.currentTarget.style.opacity = '0.72')}
+                                    onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                                >Create a pool →</button>
                             </div>
                         </div>
                     </div>
-
                 </div>
-            </div>
 
-            <style>{`
-        .sunburst-light { display: block; }
-        .sunburst-dark  { display: none; }
-        [data-theme="dark"] .sunburst-light { display: none; }
-        [data-theme="dark"] .sunburst-dark  { display: block; }
-      `}</style>
+                {/* ── FOOTER ── */}
+                <div
+                    ref={footerRef}
+                    style={{
+                        padding: '56px 56px 52px',
+                        opacity: footerVisible ? 1 : 0,
+                        transform: footerVisible ? 'translateY(0)' : 'translateY(20px)',
+                        transition: 'opacity 0.5s ease, transform 0.5s ease',
+                    }}>
+                    <div style={{
+                        paddingTop: 32, borderTop: `1px solid ${BORDER}`,
+                        display: 'flex', justifyContent: 'space-between',
+                        alignItems: 'center', flexWrap: 'wrap' as const, gap: 12,
+                    }}>
+                        <span style={{
+                            fontFamily: SERIF, fontStyle: 'italic',
+                            fontSize: 22, color: FG,
+                            letterSpacing: '0.01em',
+                        }}>Aavart</span>
+                        <span style={{
+                            fontFamily: SANS, fontSize: 13,
+                            color: 'rgba(221,217,208,0.45)',
+                            letterSpacing: '0.02em',
+                        }}>
+                            Made with love · 2026
+                        </span>
+                    </div>
+                </div>
+            </main>
+
+            {/* ── DOCS MODAL ── */}
+            {docsOpen && (
+                <div
+                    style={{
+                        position: 'fixed', inset: 0, zIndex: 800,
+                        background: 'rgba(6,6,5,0.92)',
+                        backdropFilter: 'blur(12px)',
+                        display: 'flex', justifyContent: 'center',
+                        overflowY: 'auto',
+                        padding: '60px 24px',
+                    }}
+                    onClick={e => { if (e.target === e.currentTarget) setDocsOpen(false) }}
+                >
+                    <div style={{
+                        width: '100%', maxWidth: 720,
+                        background: '#0f0f0e',
+                        border: `1px solid ${BORDER}`,
+                        borderRadius: 16,
+                        padding: '56px 64px 72px',
+                        position: 'relative',
+                        height: 'fit-content',
+                    }}>
+                        {/* close */}
+                        <button
+                            onClick={() => setDocsOpen(false)}
+                            style={{
+                                position: 'absolute', top: 24, right: 24,
+                                fontFamily: SANS, fontSize: 11,
+                                color: MUTED, background: 'none',
+                                border: `1px solid ${BORDER}`,
+                                borderRadius: 6, padding: '6px 14px',
+                                cursor: 'pointer', letterSpacing: '0.06em',
+                                transition: 'all 0.12s',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.color = FG; e.currentTarget.style.borderColor = 'rgba(221,217,208,0.25)' }}
+                            onMouseLeave={e => { e.currentTarget.style.color = MUTED; e.currentTarget.style.borderColor = BORDER }}
+                        >✕ Close</button>
+
+                        {/* header */}
+                        <div style={{
+                            fontFamily: SANS, fontSize: 9,
+                            letterSpacing: '0.22em', color: 'rgba(221,217,208,0.2)',
+                            textTransform: 'uppercase' as const, marginBottom: 20,
+                        }}>Documentation</div>
+                        <h2 style={{
+                            fontFamily: SERIF, fontSize: 42,
+                            color: FG, fontWeight: 400,
+                            lineHeight: 1.05, letterSpacing: '-0.01em',
+                            marginBottom: 56,
+                        }}>Everything about<br />Aavart.</h2>
+
+                        {/* sections */}
+                        {docsSections.map((section, i) => (
+                            <div key={i} style={{
+                                marginBottom: 48,
+                                paddingBottom: 48,
+                                borderBottom: i < docsSections.length - 1 ? `1px solid ${BORDER}` : 'none',
+                            }}>
+                                <div style={{
+                                    fontFamily: SANS, fontSize: 10,
+                                    letterSpacing: '0.16em', color: 'rgba(221,217,208,0.28)',
+                                    marginBottom: 16,
+                                }}>{section.label}</div>
+                                {section.body.split('\n\n').map((para, j, arr) => (
+                                    <p key={j} style={{
+                                        fontFamily: SANS, fontSize: 14,
+                                        color: 'rgba(221,217,208,0.62)', lineHeight: 1.9,
+                                        marginBottom: j < arr.length - 1 ? 16 : 0,
+                                    }}>{para}</p>
+                                ))}
+                            </div>
+                        ))}
+
+                        {/* bottom CTA */}
+                        <button
+                            onClick={() => { setDocsOpen(false); onCreatePool() }}
+                            style={{
+                                fontFamily: SANS, fontSize: 13,
+                                background: FG, color: BG,
+                                border: 'none', borderRadius: 6,
+                                padding: '14px 32px', cursor: 'pointer',
+                                transition: 'opacity 0.12s', letterSpacing: '0.04em',
+                                marginTop: 8,
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.opacity = '0.72')}
+                            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                        >Ready — Create a pool →</button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
