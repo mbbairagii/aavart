@@ -5,8 +5,8 @@ interface Props {
     onJoinPool: (address: string) => void
 }
 
-const SERIF = "'Instrument Serif', Georgia, serif"
-const SANS = "'DM Sans', sans-serif"
+const SERIF = "'Cormorant Garamond', Georgia, serif"
+const SANS  = "'Syne', sans-serif"
 
 const TRS = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
 const DUR = '0.6s'
