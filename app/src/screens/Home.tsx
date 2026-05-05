@@ -8,7 +8,6 @@ interface Props {
 const SERIF = "'Instrument Serif', Georgia, serif"
 const SANS = "'DM Sans', sans-serif"
 
-// ── theme tokens ──────────────────────────────────────────────
 const DARK = {
     BG: '#0a0a0a',
     FG: '#ddd9d0',
@@ -18,8 +17,6 @@ const DARK = {
     NAV_BG_SCROLLED: 'rgba(10,10,10,0.97)',
     DROPDOWN_BG: 'rgba(13,13,12,0.98)',
     HERO_GRADIENT: 'linear-gradient(to bottom, rgba(10,10,10,0.1) 0%, rgba(10,10,10,0.0) 35%, rgba(10,10,10,0.85) 78%, #0a0a0a 100%)',
-    HERO_IMG: '/hero-bg.png',
-    HERO_IMG_OPACITY: 0.55,
     DOCS_BG: '#0f0f0e',
     DOCS_BACKDROP: 'rgba(6,6,5,0.92)',
     STROKE: '#ddd9d0',
@@ -43,8 +40,6 @@ const LIGHT = {
     NAV_BG_SCROLLED: 'rgba(245,242,235,0.97)',
     DROPDOWN_BG: 'rgba(250,248,244,0.99)',
     HERO_GRADIENT: 'linear-gradient(to bottom, rgba(245,242,235,0.05) 0%, rgba(245,242,235,0.0) 35%, rgba(245,242,235,0.82) 72%, #f5f2eb 100%)',
-    HERO_IMG: '/hero-bg-white.png',
-    HERO_IMG_OPACITY: 0.9,
     DOCS_BG: '#faf9f6',
     DOCS_BACKDROP: 'rgba(230,227,219,0.88)',
     STROKE: '#111111',
@@ -58,6 +53,10 @@ const LIGHT = {
     ABOUT_MUTED: 'rgba(17,17,17,0.45)',
     ABOUT_LABEL: 'rgba(17,17,17,0.28)',
 }
+
+const TRS = 'cubic-bezier(0.4, 0, 0.2, 1)'
+const DUR = '0.45s'
+const T_ALL = `background ${DUR} ${TRS}, color ${DUR} ${TRS}, border-color ${DUR} ${TRS}, opacity ${DUR} ${TRS}`
 
 const steps = [
     { n: '01', t: 'Create', d: 'Set your contribution amount, number of members, and round duration. Deploy in one click.' },
@@ -110,11 +109,12 @@ function useTheme() {
         obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
         return () => obs.disconnect()
     }, [])
-    return isLight ? LIGHT : DARK
+    return isLight
 }
 
 export default function Home({ onCreatePool, onJoinPool }: Props) {
-    const T = useTheme()
+    const isLight = useTheme()
+    const T = isLight ? LIGHT : DARK
 
     const [inviteInput, setInviteInput] = useState('')
     const [joinOpen, setJoinOpen] = useState(false)
@@ -169,17 +169,32 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
         onJoinPool(trimmed)
     }
 
+    // shared image style — both images always in DOM, only opacity toggles
+    const imgBase: React.CSSProperties = {
+        position: 'absolute', inset: 0,
+        width: '100%', height: '100%',
+        objectFit: 'cover',
+        objectPosition: '60% center',
+        zIndex: 0,
+        userSelect: 'none',
+        pointerEvents: 'none',
+        transition: `opacity ${DUR} ${TRS}`,
+    }
+
     const navBtnBase: React.CSSProperties = {
         fontFamily: SANS, fontSize: 11,
         letterSpacing: '0.07em',
         background: 'none', border: 'none',
         padding: '10px 16px', cursor: 'pointer',
-        transition: 'color 0.12s',
+        transition: `color 0.15s ease`,
         color: T.MUTED,
     }
 
     return (
-        <div style={{ background: T.BG, color: T.FG, minHeight: '100vh', transition: 'background 0.2s ease, color 0.2s ease' }}>
+        <div style={{
+            background: T.BG, color: T.FG, minHeight: '100vh',
+            transition: T_ALL,
+        }}>
 
             {/* ── NAV ── */}
             <nav
@@ -194,10 +209,10 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                     border: `1px solid ${T.BORDER}`,
                     borderRadius: 999,
                     padding: '0 6px',
-                    transition: 'background 0.25s',
+                    transition: `background ${DUR} ${TRS}, border-color ${DUR} ${TRS}, box-shadow ${DUR} ${TRS}`,
                     whiteSpace: 'nowrap' as const,
                     gap: 2,
-                    boxShadow: T === LIGHT ? '0 2px 24px rgba(0,0,0,0.08)' : 'none',
+                    boxShadow: isLight ? '0 2px 24px rgba(0,0,0,0.08)' : 'none',
                 }}>
 
                 <span style={{
@@ -206,7 +221,7 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                     padding: '10px 18px',
                     borderRight: `1px solid ${T.BORDER}`,
                     letterSpacing: '0.01em',
-                    transition: 'color 0.2s',
+                    transition: T_ALL,
                 }}>Aavart</span>
 
                 <button
@@ -216,7 +231,7 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                     onMouseLeave={e => (e.currentTarget.style.color = howOpen ? T.FG : T.MUTED)}
                 >How it works</button>
 
-                <div style={{ width: 1, height: 14, background: T.BORDER }} />
+                <div style={{ width: 1, height: 14, background: T.BORDER, transition: `background ${DUR} ${TRS}` }} />
 
                 <button
                     onClick={onCreatePool}
@@ -225,7 +240,8 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                         background: T.FG, color: T.BG,
                         border: 'none', borderRadius: 999,
                         padding: '8px 18px', margin: '4px 2px',
-                        cursor: 'pointer', transition: 'opacity 0.12s, background 0.2s, color 0.2s',
+                        cursor: 'pointer',
+                        transition: `opacity 0.12s ease, background ${DUR} ${TRS}, color ${DUR} ${TRS}`,
                         letterSpacing: '0.04em',
                     }}
                     onMouseEnter={e => (e.currentTarget.style.opacity = '0.72')}
@@ -240,13 +256,13 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                         border: `1px solid ${joinOpen ? T.BORDER.replace('0.08', '0.25') : T.BORDER}`,
                         borderRadius: 999,
                         padding: '7px 16px', margin: '4px 2px 4px 0',
-                        cursor: 'pointer', transition: 'all 0.12s',
+                        cursor: 'pointer', transition: `all 0.15s ease`,
                     }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = T.MUTED; e.currentTarget.style.color = T.FG }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = T.BORDER; e.currentTarget.style.color = joinOpen ? T.FG : T.MUTED }}
                 >Join</button>
 
-                <div style={{ width: 1, height: 14, background: T.BORDER }} />
+                <div style={{ width: 1, height: 14, background: T.BORDER, transition: `background ${DUR} ${TRS}` }} />
 
                 <button
                     style={{ ...navBtnBase, color: whatOpen ? T.FG : T.MUTED, paddingLeft: 14 }}
@@ -267,12 +283,12 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                     border: `1px solid ${T.BORDER}`,
                     borderRadius: 14,
                     backdropFilter: 'blur(24px)',
-                    boxShadow: T === LIGHT ? '0 24px 56px rgba(0,0,0,0.12)' : '0 24px 56px rgba(0,0,0,0.7)',
+                    boxShadow: isLight ? '0 24px 56px rgba(0,0,0,0.12)' : '0 24px 56px rgba(0,0,0,0.7)',
                     width: 560,
                     overflow: 'hidden',
                     maxHeight: howOpen ? 340 : 0,
                     opacity: howOpen ? 1 : 0,
-                    transition: 'max-height 0.28s cubic-bezier(0.16,1,0.3,1), opacity 0.18s ease, top 0.18s ease',
+                    transition: `max-height 0.28s cubic-bezier(0.16,1,0.3,1), opacity 0.18s ease, top 0.18s ease, background ${DUR} ${TRS}, border-color ${DUR} ${TRS}`,
                     pointerEvents: howOpen ? 'auto' : 'none',
                 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', borderBottom: `1px solid ${T.BORDER}` }}>
@@ -280,20 +296,23 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                         <div key={i} style={{
                             padding: '24px 22px',
                             borderRight: i < 3 ? `1px solid ${T.BORDER}` : 'none',
+                            transition: `border-color ${DUR} ${TRS}`,
                         }}>
                             <div style={{
                                 fontFamily: SANS, fontSize: 9,
                                 letterSpacing: '0.18em', color: T.STEP_NUM,
-                                marginBottom: 12,
+                                marginBottom: 12, transition: `color ${DUR} ${TRS}`,
                             }}>{s.n}</div>
                             <div style={{
                                 fontFamily: SERIF, fontSize: 22,
                                 color: T.FG, marginBottom: 10,
                                 lineHeight: 1, letterSpacing: '-0.01em',
+                                transition: `color ${DUR} ${TRS}`,
                             }}>{s.t}</div>
                             <div style={{
                                 fontFamily: SANS, fontSize: 11,
                                 color: T.STEP_DESC, lineHeight: 1.75,
+                                transition: `color ${DUR} ${TRS}`,
                             }}>{s.d}</div>
                         </div>
                     ))}
@@ -305,13 +324,15 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                     <span style={{
                         fontFamily: SERIF, fontStyle: 'italic',
                         fontSize: 12, color: T.TAGLINE,
+                        transition: `color ${DUR} ${TRS}`,
                     }}>On-chain chit fund on Solana</span>
                     <button onClick={onCreatePool} style={{
                         fontFamily: SANS, fontSize: 11,
                         background: T.FG, color: T.BG,
                         border: 'none', borderRadius: 6,
                         padding: '9px 18px', cursor: 'pointer',
-                        transition: 'opacity 0.12s', letterSpacing: '0.04em',
+                        transition: `opacity 0.12s ease, background ${DUR} ${TRS}, color ${DUR} ${TRS}`,
+                        letterSpacing: '0.04em',
                     }}
                         onMouseEnter={e => (e.currentTarget.style.opacity = '0.72')}
                         onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
@@ -330,12 +351,12 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                     border: `1px solid ${T.BORDER}`,
                     borderRadius: 14,
                     backdropFilter: 'blur(24px)',
-                    boxShadow: T === LIGHT ? '0 24px 56px rgba(0,0,0,0.12)' : '0 24px 56px rgba(0,0,0,0.7)',
+                    boxShadow: isLight ? '0 24px 56px rgba(0,0,0,0.12)' : '0 24px 56px rgba(0,0,0,0.7)',
                     width: 420,
                     overflow: 'hidden',
                     maxHeight: whatOpen ? 360 : 0,
                     opacity: whatOpen ? 1 : 0,
-                    transition: 'max-height 0.28s cubic-bezier(0.16,1,0.3,1), opacity 0.18s ease, top 0.18s ease',
+                    transition: `max-height 0.28s cubic-bezier(0.16,1,0.3,1), opacity 0.18s ease, top 0.18s ease, background ${DUR} ${TRS}, border-color ${DUR} ${TRS}`,
                     pointerEvents: whatOpen ? 'auto' : 'none',
                 }}>
                 <div style={{ padding: '28px 28px 28px' }}>
@@ -343,18 +364,20 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                         fontFamily: SANS, fontSize: 9,
                         letterSpacing: '0.22em', color: T.ABOUT_LABEL,
                         textTransform: 'uppercase' as const, marginBottom: 20,
+                        transition: `color ${DUR} ${TRS}`,
                     }}>About</div>
                     <p style={{
                         fontFamily: SERIF, fontStyle: 'italic',
                         fontSize: 17, color: T.FG,
                         lineHeight: 1.85, marginBottom: 16,
+                        transition: `color ${DUR} ${TRS}`,
                     }}>
                         Aavart is a trustless chit fund on Solana — a rotating savings circle where members pool funds and take turns receiving the full pot.
                     </p>
                     <p style={{
                         fontFamily: SANS, fontSize: 12,
                         color: T.ABOUT_MUTED, lineHeight: 1.8,
-                        marginBottom: 28,
+                        marginBottom: 28, transition: `color ${DUR} ${TRS}`,
                     }}>
                         No bank. No middleman. Smart contracts handle contributions, payouts, and enforcement — so your circle runs on code, not trust.
                     </p>
@@ -364,7 +387,8 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                             background: T.FG, color: T.BG,
                             border: 'none', borderRadius: 6,
                             padding: '10px 20px', cursor: 'pointer',
-                            transition: 'opacity 0.12s', letterSpacing: '0.04em',
+                            transition: `opacity 0.12s ease, background ${DUR} ${TRS}, color ${DUR} ${TRS}`,
+                            letterSpacing: '0.04em',
                         }}
                             onMouseEnter={e => (e.currentTarget.style.opacity = '0.72')}
                             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
@@ -376,7 +400,7 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                                 background: 'transparent', color: T.MUTED,
                                 border: `1px solid ${T.BORDER}`, borderRadius: 6,
                                 padding: '10px 18px', cursor: 'pointer',
-                                transition: 'all 0.12s', letterSpacing: '0.04em',
+                                transition: `all 0.15s ease`, letterSpacing: '0.04em',
                             }}
                             onMouseEnter={e => { e.currentTarget.style.borderColor = T.MUTED; e.currentTarget.style.color = T.FG }}
                             onMouseLeave={e => { e.currentTarget.style.borderColor = T.BORDER; e.currentTarget.style.color = T.MUTED }}
@@ -399,7 +423,8 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                         display: 'flex', gap: 8,
                         backdropFilter: 'blur(24px)',
                         minWidth: 380,
-                        boxShadow: T === LIGHT ? '0 24px 56px rgba(0,0,0,0.12)' : '0 24px 56px rgba(0,0,0,0.7)',
+                        boxShadow: isLight ? '0 24px 56px rgba(0,0,0,0.12)' : '0 24px 56px rgba(0,0,0,0.7)',
+                        transition: `background ${DUR} ${TRS}, border-color ${DUR} ${TRS}`,
                     }}>
                     <input
                         autoFocus
@@ -409,10 +434,11 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                         placeholder="Paste invite link or pool address"
                         style={{
                             flex: 1, padding: '10px 14px',
-                            background: T === LIGHT ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)',
+                            background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)',
                             border: `1px solid ${T.BORDER}`,
                             borderRadius: 8, fontSize: 13, outline: 'none',
                             fontFamily: SANS, color: T.FG,
+                            transition: T_ALL,
                         }}
                     />
                     <button onClick={handleJoin} disabled={!inviteInput.trim()} style={{
@@ -421,7 +447,7 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                         border: 'none', borderRadius: 8,
                         padding: '10px 20px', cursor: 'pointer',
                         opacity: inviteInput.trim() ? 1 : 0.3,
-                        transition: 'opacity 0.12s',
+                        transition: `opacity 0.12s ease, background ${DUR} ${TRS}, color ${DUR} ${TRS}`,
                     }}>Join →</button>
                 </div>
             )}
@@ -436,28 +462,27 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                     borderBottom: `1px solid ${T.BORDER}`,
                     position: 'relative',
                     overflow: 'hidden',
-                    transition: 'border-color 0.2s',
+                    transition: `border-color ${DUR} ${TRS}`,
                 }}>
+                    {/* Dark hero — always mounted, crossfades */}
                     <img
-                        src={T.HERO_IMG}
+                        src="/hero-bg.png"
                         alt=""
-                        style={{
-                            position: 'absolute', inset: 0,
-                            width: '100%', height: '100%',
-                            objectFit: 'cover',
-                            objectPosition: T === LIGHT ? '30% center' : 'center top',
-                            opacity: T.HERO_IMG_OPACITY,
-                            zIndex: 0,
-                            userSelect: 'none',
-                            pointerEvents: 'none',
-                            transition: 'opacity 0.3s ease',
-                        }}
+                        style={{ ...imgBase, opacity: isLight ? 0 : 0.55 }}
                     />
+                    {/* Light hero — always mounted, crossfades */}
+                    <img
+                        src="/hero-bg-white.png"
+                        alt=""
+                        style={{ ...imgBase, opacity: isLight ? 0.9 : 0 }}
+                    />
+
+                    {/* gradient overlay */}
                     <div style={{
                         position: 'absolute', inset: 0, zIndex: 1,
                         background: T.HERO_GRADIENT,
                         pointerEvents: 'none',
-                        transition: 'background 0.3s ease',
+                        transition: `background ${DUR} ${TRS}`,
                     }} />
 
                     {/* content */}
@@ -468,12 +493,13 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                             lineHeight: 0.84, letterSpacing: '-0.01em',
                             color: T.FG, margin: '0 0 48px',
                             fontWeight: 400,
-                            transition: 'color 0.2s',
+                            transition: `color ${DUR} ${TRS}`,
                         }}>
                             Save<br />
                             <span style={{
                                 WebkitTextStroke: `1.5px ${T.STROKE}`,
                                 color: 'transparent',
+                                transition: `color ${DUR} ${TRS}`,
                             }}>
                                 together.
                             </span>
@@ -483,13 +509,13 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                             display: 'flex', justifyContent: 'space-between',
                             alignItems: 'flex-end', flexWrap: 'wrap' as const, gap: 24,
                             paddingTop: 28, borderTop: `1px solid ${T.BORDER}`,
-                            transition: 'border-color 0.2s',
+                            transition: `border-color ${DUR} ${TRS}`,
                         }}>
                             <p style={{
                                 fontFamily: SANS, fontSize: 13,
                                 color: T.MUTED, lineHeight: 1.9,
                                 margin: 0, maxWidth: 280,
-                                transition: 'color 0.2s',
+                                transition: `color ${DUR} ${TRS}`,
                             }}>
                                 Trustless on-chain chit fund on Solana.<br />
                                 Pool funds, rotate payouts.<br />
@@ -503,7 +529,7 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                                         background: 'transparent', color: T.MUTED,
                                         border: `1px solid ${T.BORDER}`, borderRadius: 4,
                                         padding: '13px 24px', cursor: 'pointer',
-                                        transition: 'all 0.12s', letterSpacing: '0.03em',
+                                        transition: `all 0.15s ease`, letterSpacing: '0.03em',
                                     }}
                                     onMouseEnter={e => { e.currentTarget.style.color = T.FG; e.currentTarget.style.borderColor = T.MUTED }}
                                     onMouseLeave={e => { e.currentTarget.style.color = T.MUTED; e.currentTarget.style.borderColor = T.BORDER }}
@@ -513,7 +539,8 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                                     background: T.FG, color: T.BG,
                                     border: 'none', borderRadius: 4,
                                     padding: '13px 28px', cursor: 'pointer',
-                                    transition: 'opacity 0.12s, background 0.2s, color 0.2s', letterSpacing: '0.03em',
+                                    transition: `opacity 0.12s ease, background ${DUR} ${TRS}, color ${DUR} ${TRS}`,
+                                    letterSpacing: '0.03em',
                                 }}
                                     onMouseEnter={e => (e.currentTarget.style.opacity = '0.72')}
                                     onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
@@ -536,19 +563,19 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                         paddingTop: 32, borderTop: `1px solid ${T.BORDER}`,
                         display: 'flex', justifyContent: 'space-between',
                         alignItems: 'center', flexWrap: 'wrap' as const, gap: 12,
-                        transition: 'border-color 0.2s',
+                        transition: `border-color ${DUR} ${TRS}`,
                     }}>
                         <span style={{
                             fontFamily: SERIF, fontStyle: 'italic',
                             fontSize: 22, color: T.FG,
                             letterSpacing: '0.01em',
-                            transition: 'color 0.2s',
+                            transition: `color ${DUR} ${TRS}`,
                         }}>Aavart</span>
                         <span style={{
                             fontFamily: SANS, fontSize: 13,
                             color: T.FOOTER_CREDIT,
                             letterSpacing: '0.02em',
-                            transition: 'color 0.2s',
+                            transition: `color ${DUR} ${TRS}`,
                         }}>
                             Made with love · 2026
                         </span>
@@ -566,6 +593,7 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                         display: 'flex', justifyContent: 'center',
                         overflowY: 'auto',
                         padding: '60px 24px',
+                        transition: `background ${DUR} ${TRS}`,
                     }}
                     onClick={e => { if (e.target === e.currentTarget) setDocsOpen(false) }}
                 >
@@ -577,7 +605,8 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                         padding: '56px 64px 72px',
                         position: 'relative',
                         height: 'fit-content',
-                        boxShadow: T === LIGHT ? '0 32px 80px rgba(0,0,0,0.12)' : 'none',
+                        boxShadow: isLight ? '0 32px 80px rgba(0,0,0,0.12)' : 'none',
+                        transition: `background ${DUR} ${TRS}, border-color ${DUR} ${TRS}`,
                     }}>
                         <button
                             onClick={() => setDocsOpen(false)}
@@ -588,7 +617,7 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                                 border: `1px solid ${T.BORDER}`,
                                 borderRadius: 6, padding: '6px 14px',
                                 cursor: 'pointer', letterSpacing: '0.06em',
-                                transition: 'all 0.12s',
+                                transition: `all 0.15s ease`,
                             }}
                             onMouseEnter={e => { e.currentTarget.style.color = T.FG; e.currentTarget.style.borderColor = T.MUTED }}
                             onMouseLeave={e => { e.currentTarget.style.color = T.MUTED; e.currentTarget.style.borderColor = T.BORDER }}
@@ -598,30 +627,32 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                             fontFamily: SANS, fontSize: 9,
                             letterSpacing: '0.22em', color: T.DOC_LABEL,
                             textTransform: 'uppercase' as const, marginBottom: 20,
+                            transition: `color ${DUR} ${TRS}`,
                         }}>Documentation</div>
                         <h2 style={{
                             fontFamily: SERIF, fontSize: 42,
                             color: T.FG, fontWeight: 400,
                             lineHeight: 1.05, letterSpacing: '-0.01em',
-                            marginBottom: 56,
+                            marginBottom: 56, transition: `color ${DUR} ${TRS}`,
                         }}>Everything about<br />Aavart.</h2>
 
                         {docsSections.map((section, i) => (
                             <div key={i} style={{
-                                marginBottom: 48,
-                                paddingBottom: 48,
+                                marginBottom: 48, paddingBottom: 48,
                                 borderBottom: i < docsSections.length - 1 ? `1px solid ${T.BORDER}` : 'none',
+                                transition: `border-color ${DUR} ${TRS}`,
                             }}>
                                 <div style={{
                                     fontFamily: SANS, fontSize: 10,
                                     letterSpacing: '0.16em', color: T.DOC_SECTION_LABEL,
-                                    marginBottom: 16,
+                                    marginBottom: 16, transition: `color ${DUR} ${TRS}`,
                                 }}>{section.label}</div>
                                 {section.body.split('\n\n').map((para, j, arr) => (
                                     <p key={j} style={{
                                         fontFamily: SANS, fontSize: 14,
                                         color: T.DOC_BODY, lineHeight: 1.9,
                                         marginBottom: j < arr.length - 1 ? 16 : 0,
+                                        transition: `color ${DUR} ${TRS}`,
                                     }}>{para}</p>
                                 ))}
                             </div>
@@ -634,8 +665,8 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                                 background: T.FG, color: T.BG,
                                 border: 'none', borderRadius: 6,
                                 padding: '14px 32px', cursor: 'pointer',
-                                transition: 'opacity 0.12s', letterSpacing: '0.04em',
-                                marginTop: 8,
+                                transition: `opacity 0.12s ease, background ${DUR} ${TRS}, color ${DUR} ${TRS}`,
+                                letterSpacing: '0.04em', marginTop: 8,
                             }}
                             onMouseEnter={e => (e.currentTarget.style.opacity = '0.72')}
                             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
