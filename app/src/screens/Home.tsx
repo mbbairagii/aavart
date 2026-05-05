@@ -8,6 +8,10 @@ interface Props {
 const SERIF = "'Instrument Serif', Georgia, serif"
 const SANS = "'DM Sans', sans-serif"
 
+const TRS = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+const DUR = '0.6s'
+const T_ALL = `background ${DUR} ${TRS}, color ${DUR} ${TRS}, border-color ${DUR} ${TRS}, opacity ${DUR} ${TRS}`
+
 const DARK = {
     BG: '#0a0a0a',
     FG: '#ddd9d0',
@@ -54,10 +58,6 @@ const LIGHT = {
     ABOUT_LABEL: 'rgba(17,17,17,0.28)',
 }
 
-const TRS = 'cubic-bezier(0.4, 0, 0.2, 1)'
-const DUR = '0.45s'
-const T_ALL = `background ${DUR} ${TRS}, color ${DUR} ${TRS}, border-color ${DUR} ${TRS}, opacity ${DUR} ${TRS}`
-
 const steps = [
     { n: '01', t: 'Create', d: 'Set your contribution amount, number of members, and round duration. Deploy in one click.' },
     { n: '02', t: 'Invite', d: 'Share your pool link. Members join and lock their SOL. The contract enforces everything.' },
@@ -98,6 +98,11 @@ That said, Aavart is an early-stage project. Smart contracts can have bugs, and 
     },
 ]
 
+const COMIC_PAGES = [
+    '/manga/1.png', '/manga/2.png', '/manga/3.png', '/manga/4.png',
+    '/manga/5.png', '/manga/6.png', '/manga/7.png',
+]
+
 function useTheme() {
     const [isLight, setIsLight] = useState(
         () => document.documentElement.getAttribute('data-theme') === 'light'
@@ -122,8 +127,11 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
     const [howOpen, setHowOpen] = useState(false)
     const [whatOpen, setWhatOpen] = useState(false)
     const [docsOpen, setDocsOpen] = useState(false)
+    const [comicOpen, setComicOpen] = useState(false)
+    const [comicPage, setComicPage] = useState(0)
     const [footerVisible, setFooterVisible] = useState(false)
     const footerRef = useRef<HTMLDivElement>(null)
+    const comicOverlayRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 60)
@@ -154,9 +162,14 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
     }, [])
 
     useEffect(() => {
-        document.body.style.overflow = docsOpen ? 'hidden' : ''
+        document.body.style.overflow = (docsOpen || comicOpen) ? 'hidden' : ''
         return () => { document.body.style.overflow = '' }
-    }, [docsOpen])
+    }, [docsOpen, comicOpen])
+
+    // focus comic overlay for keyboard nav
+    useEffect(() => {
+        if (comicOpen) comicOverlayRef.current?.focus()
+    }, [comicOpen])
 
     function handleJoin() {
         const trimmed = inviteInput.trim()
@@ -169,7 +182,11 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
         onJoinPool(trimmed)
     }
 
-    // shared image style — both images always in DOM, only opacity toggles
+    function openComic() {
+        setComicPage(0)
+        setComicOpen(true)
+    }
+
     const imgBase: React.CSSProperties = {
         position: 'absolute', inset: 0,
         width: '100%', height: '100%',
@@ -178,6 +195,8 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
         zIndex: 0,
         userSelect: 'none',
         pointerEvents: 'none',
+        willChange: 'opacity',
+        transform: 'translateZ(0)',
         transition: `opacity ${DUR} ${TRS}`,
     }
 
@@ -191,10 +210,7 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
     }
 
     return (
-        <div style={{
-            background: T.BG, color: T.FG, minHeight: '100vh',
-            transition: T_ALL,
-        }}>
+        <div style={{ background: T.BG, color: T.FG, minHeight: '100vh', transition: T_ALL }}>
 
             {/* ── NAV ── */}
             <nav
@@ -270,6 +286,24 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                     onMouseEnter={e => (e.currentTarget.style.color = T.FG)}
                     onMouseLeave={e => (e.currentTarget.style.color = whatOpen ? T.FG : T.MUTED)}
                 >What is Aavart</button>
+
+                <div style={{ width: 1, height: 14, background: T.BORDER, transition: `background ${DUR} ${TRS}` }} />
+
+                {/* Read comic button */}
+                <button
+                    onClick={openComic}
+                    style={{
+                        ...navBtnBase,
+                        fontFamily: SERIF,
+                        fontStyle: 'italic' as const,
+                        fontSize: 13,
+                        paddingLeft: 14,
+                        paddingRight: 18,
+                        color: T.MUTED,
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.color = T.FG)}
+                    onMouseLeave={e => (e.currentTarget.style.color = T.MUTED)}
+                >Read comic ↗</button>
             </nav>
 
             {/* ── HOW IT WORKS DROPDOWN ── */}
@@ -288,7 +322,7 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                     overflow: 'hidden',
                     maxHeight: howOpen ? 340 : 0,
                     opacity: howOpen ? 1 : 0,
-                    transition: `max-height 0.28s cubic-bezier(0.16,1,0.3,1), opacity 0.18s ease, top 0.18s ease, background ${DUR} ${TRS}, border-color ${DUR} ${TRS}`,
+                    transition: `max-height 0.32s ${TRS}, opacity 0.22s ease, top 0.22s ease, background ${DUR} ${TRS}, border-color ${DUR} ${TRS}`,
                     pointerEvents: howOpen ? 'auto' : 'none',
                 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', borderBottom: `1px solid ${T.BORDER}` }}>
@@ -317,10 +351,7 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                         </div>
                     ))}
                 </div>
-                <div style={{
-                    padding: '16px 22px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                }}>
+                <div style={{ padding: '16px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{
                         fontFamily: SERIF, fontStyle: 'italic',
                         fontSize: 12, color: T.TAGLINE,
@@ -356,7 +387,7 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                     overflow: 'hidden',
                     maxHeight: whatOpen ? 360 : 0,
                     opacity: whatOpen ? 1 : 0,
-                    transition: `max-height 0.28s cubic-bezier(0.16,1,0.3,1), opacity 0.18s ease, top 0.18s ease, background ${DUR} ${TRS}, border-color ${DUR} ${TRS}`,
+                    transition: `max-height 0.32s ${TRS}, opacity 0.22s ease, top 0.22s ease, background ${DUR} ${TRS}, border-color ${DUR} ${TRS}`,
                     pointerEvents: whatOpen ? 'auto' : 'none',
                 }}>
                 <div style={{ padding: '28px 28px 28px' }}>
@@ -464,20 +495,9 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                     overflow: 'hidden',
                     transition: `border-color ${DUR} ${TRS}`,
                 }}>
-                    {/* Dark hero — always mounted, crossfades */}
-                    <img
-                        src="/hero-bg.png"
-                        alt=""
-                        style={{ ...imgBase, opacity: isLight ? 0 : 0.55 }}
-                    />
-                    {/* Light hero — always mounted, crossfades */}
-                    <img
-                        src="/hero-bg-white.png"
-                        alt=""
-                        style={{ ...imgBase, opacity: isLight ? 0.9 : 0 }}
-                    />
+                    <img src="/hero-bg.png" alt="" style={{ ...imgBase, opacity: isLight ? 0 : 0.55 }} />
+                    <img src="/hero-bg-white.png" alt="" style={{ ...imgBase, opacity: isLight ? 0.9 : 0 }} />
 
-                    {/* gradient overlay */}
                     <div style={{
                         position: 'absolute', inset: 0, zIndex: 1,
                         background: T.HERO_GRADIENT,
@@ -485,23 +505,29 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                         transition: `background ${DUR} ${TRS}`,
                     }} />
 
-                    {/* content */}
+                    <p style={{
+                        position: 'absolute', top: 50, left: 0, right: 0,
+                        textAlign: 'center',
+                        fontFamily: SANS, fontSize: 14,
+                        letterSpacing: '0.22em',
+                        textTransform: 'uppercase' as const,
+                        color: T.MUTED, zIndex: 2, margin: 0,
+                        transition: `color ${DUR} ${TRS}`,
+                        pointerEvents: 'none',
+                    }}>Decentralized circle savings</p>
+
                     <div style={{ position: 'relative', zIndex: 2, marginBottom: 60 }}>
                         <h1 style={{
                             fontFamily: SERIF,
-                            fontSize: 'clamp(72px, 14vw, 220px)',
+                            fontSize: 'clamp(40px, 7vw, 120px)',
                             lineHeight: 0.84, letterSpacing: '-0.01em',
                             color: T.FG, margin: '0 0 48px',
                             fontWeight: 400,
                             transition: `color ${DUR} ${TRS}`,
                         }}>
-                            Save<br />
-                            <span style={{
-                                WebkitTextStroke: `1.5px ${T.STROKE}`,
-                                color: 'transparent',
-                                transition: `color ${DUR} ${TRS}`,
-                            }}>
-                                together.
+                            Contribute together,<br />
+                            <span style={{ WebkitTextStroke: `1.5px ${T.STROKE}`, color: 'transparent' }}>
+                                win in turns.
                             </span>
                         </h1>
 
@@ -557,7 +583,7 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                         padding: '56px 56px 52px',
                         opacity: footerVisible ? 1 : 0,
                         transform: footerVisible ? 'translateY(0)' : 'translateY(20px)',
-                        transition: 'opacity 0.5s ease, transform 0.5s ease',
+                        transition: 'opacity 0.55s ease, transform 0.55s ease',
                     }}>
                     <div style={{
                         paddingTop: 32, borderTop: `1px solid ${T.BORDER}`,
@@ -573,12 +599,9 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                         }}>Aavart</span>
                         <span style={{
                             fontFamily: SANS, fontSize: 13,
-                            color: T.FOOTER_CREDIT,
-                            letterSpacing: '0.02em',
+                            color: T.FOOTER_CREDIT, letterSpacing: '0.02em',
                             transition: `color ${DUR} ${TRS}`,
-                        }}>
-                            Made with love · 2026
-                        </span>
+                        }}>Made with love · 2026</span>
                     </div>
                 </div>
             </main>
@@ -672,6 +695,140 @@ export default function Home({ onCreatePool, onJoinPool }: Props) {
                             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                         >Ready — Create a pool →</button>
                     </div>
+                </div>
+            )}
+
+            {/* ── COMIC OVERLAY ── */}
+            {comicOpen && (
+                <div
+                    ref={comicOverlayRef}
+                    tabIndex={0}
+                    onKeyDown={e => {
+                        if (e.key === 'ArrowRight') setComicPage(p => Math.min(COMIC_PAGES.length - 1, p + 1))
+                        if (e.key === 'ArrowLeft') setComicPage(p => Math.max(0, p - 1))
+                        if (e.key === 'Escape') setComicOpen(false)
+                    }}
+                    style={{
+                        position: 'fixed', inset: 0, zIndex: 900,
+                        background: 'rgba(4,4,4,0.97)',
+                        backdropFilter: 'blur(16px)',
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', justifyContent: 'center',
+                        outline: 'none',
+                    }}
+                >
+                    {/* Top bar */}
+                    <div style={{
+                        position: 'absolute', top: 0, left: 0, right: 0,
+                        padding: '20px 32px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        borderBottom: '1px solid rgba(221,217,208,0.07)',
+                        zIndex: 2,
+                    }}>
+                        <span style={{
+                            fontFamily: SERIF, fontStyle: 'italic',
+                            fontSize: 15, color: 'rgba(221,217,208,0.5)',
+                        }}>Aavart — The Comic</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                            <span style={{
+                                fontFamily: SANS, fontSize: 11,
+                                letterSpacing: '0.12em',
+                                color: 'rgba(221,217,208,0.25)',
+                            }}>{comicPage + 1} / {COMIC_PAGES.length}</span>
+                            <button
+                                onClick={() => setComicOpen(false)}
+                                style={{
+                                    fontFamily: SANS, fontSize: 11,
+                                    color: 'rgba(221,217,208,0.4)',
+                                    background: 'none',
+                                    border: '1px solid rgba(221,217,208,0.1)',
+                                    borderRadius: 6, padding: '6px 14px',
+                                    cursor: 'pointer', letterSpacing: '0.06em',
+                                    transition: 'all 0.15s ease',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.color = '#ddd9d0'; e.currentTarget.style.borderColor = 'rgba(221,217,208,0.3)' }}
+                                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(221,217,208,0.4)'; e.currentTarget.style.borderColor = 'rgba(221,217,208,0.1)' }}
+                            >✕ Close</button>
+                        </div>
+                    </div>
+
+                    {/* Comic page */}
+                    <img
+                        key={comicPage}
+                        src={COMIC_PAGES[comicPage]}
+                        alt={`Comic page ${comicPage + 1}`}
+                        style={{
+                            maxHeight: 'calc(100vh - 120px)',
+                            maxWidth: '90vw',
+                            objectFit: 'contain',
+                            userSelect: 'none',
+                            animation: 'comicFadeIn 0.18s ease',
+                        }}
+                    />
+
+                    {/* Prev */}
+                    <button
+                        onClick={() => setComicPage(p => Math.max(0, p - 1))}
+                        disabled={comicPage === 0}
+                        style={{
+                            position: 'absolute', left: 24, top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'rgba(221,217,208,0.06)',
+                            border: '1px solid rgba(221,217,208,0.1)',
+                            borderRadius: 8,
+                            color: comicPage === 0 ? 'rgba(221,217,208,0.15)' : 'rgba(221,217,208,0.7)',
+                            width: 44, height: 44,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: comicPage === 0 ? 'default' : 'pointer',
+                            fontSize: 18,
+                            transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={e => { if (comicPage > 0) e.currentTarget.style.background = 'rgba(221,217,208,0.12)' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(221,217,208,0.06)' }}
+                    >←</button>
+
+                    {/* Next */}
+                    <button
+                        onClick={() => setComicPage(p => Math.min(COMIC_PAGES.length - 1, p + 1))}
+                        disabled={comicPage === COMIC_PAGES.length - 1}
+                        style={{
+                            position: 'absolute', right: 24, top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'rgba(221,217,208,0.06)',
+                            border: '1px solid rgba(221,217,208,0.1)',
+                            borderRadius: 8,
+                            color: comicPage === COMIC_PAGES.length - 1 ? 'rgba(221,217,208,0.15)' : 'rgba(221,217,208,0.7)',
+                            width: 44, height: 44,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: comicPage === COMIC_PAGES.length - 1 ? 'default' : 'pointer',
+                            fontSize: 18,
+                            transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={e => { if (comicPage < COMIC_PAGES.length - 1) e.currentTarget.style.background = 'rgba(221,217,208,0.12)' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(221,217,208,0.06)' }}
+                    >→</button>
+
+                    {/* Dot indicators */}
+                    <div style={{
+                        position: 'absolute', bottom: 24,
+                        display: 'flex', gap: 6, alignItems: 'center',
+                    }}>
+                        {COMIC_PAGES.map((_, i) => (
+                            <button
+                                key={i}
+                                onClick={() => setComicPage(i)}
+                                style={{
+                                    width: i === comicPage ? 20 : 6,
+                                    height: 6, borderRadius: 999,
+                                    background: i === comicPage ? 'rgba(221,217,208,0.8)' : 'rgba(221,217,208,0.2)',
+                                    border: 'none', cursor: 'pointer', padding: 0,
+                                    transition: 'all 0.2s ease',
+                                }}
+                            />
+                        ))}
+                    </div>
+
+                    <style>{`@keyframes comicFadeIn { from { opacity:0; transform:scale(0.98) } to { opacity:1; transform:scale(1) } }`}</style>
                 </div>
             )}
         </div>
