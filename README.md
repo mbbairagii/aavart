@@ -93,4 +93,4 @@ VITE_RPC_URL=https://api.devnet.solana.com
 
 ## Built by
 
-[@yourusername](https://github.com/mbbairagii) 
+[MOHINI](https://github.com/mbbairagii) 
