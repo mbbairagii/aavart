@@ -59,10 +59,9 @@ export default function App() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '12px 20px',
+          padding: '12px 20px 20px 20px',
           background: 'var(--color-panel-bg)',
-          borderBottom: '3px solid var(--color-border)',
-          boxShadow: '0 3px 0 var(--color-border)',
+          
           position: 'sticky',
           top: 0,
           zIndex: 50,
