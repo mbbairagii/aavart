@@ -19,7 +19,6 @@ export default function App() {
     window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   )
 
-  // Pre-warm Phantom on mount — wakes extension before user clicks
   useEffect(() => {
     if ((window as any).solana?.isPhantom) {
       ; (window as any).solana.connect({ onlyIfTrusted: true }).catch(() => { })
@@ -57,45 +56,67 @@ export default function App() {
 
       <div style={{ minHeight: '100dvh', opacity: introPlayed ? 1 : 0, transition: 'opacity 0.6s ease' }}>
         <nav style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px 28px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 20px',
           background: 'var(--color-panel-bg)',
           borderBottom: '3px solid var(--color-border)',
           boxShadow: '0 3px 0 var(--color-border)',
-          position: 'sticky', top: 0, zIndex: 50,
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
           transition: 'background 0.2s ease',
+          gap: 12,
         }}>
-          {/* Logo */}
+
           <button
             onClick={() => setScreen('home')}
             style={{
               fontFamily: 'var(--font-display)',
-              fontSize: 28, letterSpacing: '0.06em',
-              color: 'var(--color-text)', lineHeight: 1,
+              fontSize: 'clamp(20px, 4vw, 28px)',
+              letterSpacing: '0.06em',
+              fontWeight: 800,
+              color: 'var(--color-text)',
+              lineHeight: 1,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 3,
             }}
           >
             AAVART
             <span style={{
-              display: 'inline-block', width: 8, height: 8,
-              background: 'var(--color-text)', borderRadius: '50%',
-              marginLeft: 4, marginBottom: 6, verticalAlign: 'bottom',
+              display: 'inline-block',
+              width: 7, height: 7,
+              background: 'var(--color-text)',
+              borderRadius: '50%',
+              marginBottom: 4,
+              flexShrink: 0,
             }} />
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             {isConnected && (
               <button
                 onClick={() => setScreen('mypools')}
                 style={{
                   fontFamily: 'var(--font-display)',
-                  fontSize: 13, letterSpacing: '0.1em',
+                  fontSize: 'clamp(10px, 2vw, 13px)',
+                  letterSpacing: '0.1em',
+                  fontWeight: 700,
                   color: screen === 'mypools' ? 'var(--color-panel-bg)' : 'var(--color-text)',
                   background: screen === 'mypools' ? 'var(--color-text)' : 'transparent',
                   border: '1.5px solid var(--color-text)',
                   borderRadius: 999,
                   cursor: 'pointer',
-                  padding: '6px 16px',
+                  padding: 'clamp(4px, 1vw, 6px) clamp(10px, 2vw, 16px)',
                   transition: 'all 0.18s ease',
+                  whiteSpace: 'nowrap',
                 }}
                 onMouseEnter={e => {
                   if (screen !== 'mypools') {
@@ -121,6 +142,7 @@ export default function App() {
             >
               {theme === 'light' ? '◐' : '●'}
             </button>
+
             <WalletMultiButton />
           </div>
         </nav>
