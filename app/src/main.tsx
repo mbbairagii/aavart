@@ -1,6 +1,6 @@
 import { Buffer } from 'buffer'
-globalThis.Buffer = Buffer
-window.Buffer = Buffer
+(window as any).global = window;
+(window as any).Buffer = Buffer;
 import { createRoot } from 'react-dom/client'
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react'
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
