@@ -54,7 +54,6 @@ Built with Anchor on Solana.
 | Smart contract | Rust + Anchor |
 | Frontend | React + TypeScript + Vite |
 | Wallet | `@solana/wallet-adapter-react` |
-| Fonts | Syne + DM Mono |
 | Hosting | Vercel |
 | Network | Solana Devnet / Mainnet |
 
