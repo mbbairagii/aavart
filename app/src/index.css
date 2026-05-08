@@ -221,3 +221,15 @@ button {
     transform: translate(2px, 2px);
     box-shadow: 0px 0px 0 var(--color-border);
 }
+
+.wallet-adapter-button {
+    font-size: 14px !important;
+    padding: 8px 18px !important;
+    height: 42px !important;
+    line-height: 1 !important;
+}
+
+.wallet-adapter-button img {
+    width: 18px !important;
+    height: 18px !important;
+}
