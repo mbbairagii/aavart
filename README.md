@@ -63,7 +63,7 @@ Built with Anchor on Solana.
 ## Run it locally
 
 ```bash
-git clone https://github.com/yourusername/aavart.git
+git clone https://github.com/mbbairagii/aavart.git
 cd aavart/app
 npm install
 npm run dev
